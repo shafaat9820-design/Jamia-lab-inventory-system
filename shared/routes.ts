@@ -1,0 +1,156 @@
+import { z } from 'zod';
+import { insertUserSchema, insertInventorySchema, insertReportSchema, insertRequestSchema, users, inventory, reports, requests } from './schema';
+
+export const errorSchemas = {
+  validation: z.object({
+    message: z.string(),
+    field: z.string().optional(),
+  }),
+  notFound: z.object({
+    message: z.string(),
+  }),
+  unauthorized: z.object({
+    message: z.string(),
+  }),
+};
+
+export const api = {
+  auth: {
+    login: {
+      method: 'POST' as const,
+      path: '/api/auth/login' as const,
+      input: z.object({
+        username: z.string(),
+        password: z.string(),
+      }),
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    logout: {
+      method: 'POST' as const,
+      path: '/api/auth/logout' as const,
+      responses: {
+        200: z.object({ message: z.string() }),
+      },
+    },
+    me: {
+      method: 'GET' as const,
+      path: '/api/auth/me' as const,
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+      },
+    },
+  },
+  inventory: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/inventory' as const,
+      responses: {
+        200: z.array(z.custom<typeof inventory.$inferSelect>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/inventory/:id' as const,
+      responses: {
+        200: z.custom<typeof inventory.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/inventory' as const,
+      input: insertInventorySchema,
+      responses: {
+        201: z.custom<typeof inventory.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/inventory/:id' as const,
+      input: insertInventorySchema.partial(),
+      responses: {
+        200: z.custom<typeof inventory.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/inventory/:id' as const,
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+  reports: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/reports' as const,
+      responses: {
+        200: z.array(z.custom<typeof reports.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/reports' as const,
+      input: insertReportSchema,
+      responses: {
+        201: z.custom<typeof reports.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+  },
+  requests: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/requests' as const,
+      responses: {
+        200: z.array(z.custom<typeof requests.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/requests' as const,
+      input: insertRequestSchema,
+      responses: {
+        201: z.custom<typeof requests.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    updateStatus: {
+      method: 'PATCH' as const,
+      path: '/api/requests/:id/status' as const,
+      input: z.object({ status: z.string() }),
+      responses: {
+        200: z.custom<typeof requests.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+  users: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/users' as const,
+      responses: {
+        200: z.array(z.custom<typeof users.$inferSelect>()),
+      },
+    },
+  }
+};
+
+export function buildUrl(path: string, params?: Record<string, string | number>): string {
+  let url = path;
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (url.includes(`:${key}`)) {
+        url = url.replace(`:${key}`, String(value));
+      }
+    });
+  }
+  return url;
+}
