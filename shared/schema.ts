@@ -8,6 +8,16 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   role: text("role").notNull(), // Admin, Lab Assistant, Lab Incharge, Principal, Store Keeper
   name: text("name").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  age: integer("age"),
+  gender: text("gender"),
+  employeeId: text("employee_id"),
+  contactNumber: text("contact_number"),
+  dateOfJoining: date("date_of_joining"),
+  profileImage: text("profile_image"),
+  department: text("department").default("Department of Computer Engineering"),
+  institution: text("institution").default("Jamia Millia Islamia"),
 });
 
 export const inventory = pgTable("inventory", {
@@ -52,6 +62,17 @@ export const insertInventorySchema = createInsertSchema(inventory).omit({ id: tr
 export const insertReportSchema = createInsertSchema(reports).omit({ id: true, date: true });
 export const insertRequestSchema = createInsertSchema(requests).omit({ id: true, date: true, status: true });
 
+export const updateProfileSchema = z.object({
+  firstName: z.string().regex(/^[A-Za-z]+$/, "Only alphabets allowed").min(1, "Required"),
+  lastName: z.string().regex(/^[A-Za-z]+$/, "Only alphabets allowed").min(1, "Required"),
+  age: z.coerce.number().min(18).max(70),
+  gender: z.enum(["Male", "Female", "Other"]),
+  employeeId: z.string().min(1, "Required"),
+  contactNumber: z.string().length(10, "Must be 10 digits").regex(/^\d+$/, "Only digits allowed"),
+  dateOfJoining: z.string().refine((val) => new Date(val) < new Date(), "Must be a past date"),
+  profileImage: z.string().optional(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InventoryItem = typeof inventory.$inferSelect;
@@ -60,3 +81,4 @@ export type Report = typeof reports.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export type RequestItem = typeof requests.$inferSelect;
 export type InsertRequestItem = z.infer<typeof insertRequestSchema>;
+export type UpdateProfileRequest = z.infer<typeof updateProfileSchema>;

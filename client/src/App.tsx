@@ -13,6 +13,7 @@ import Inventory from "./pages/inventory";
 import Reports from "./pages/reports";
 import Requests from "./pages/requests";
 import UsersPage from "./pages/users";
+import Profile from "./pages/profile";
 import NotFound from "@/pages/not-found";
 
 // Protected Route Wrapper
@@ -59,6 +60,9 @@ function Router() {
       </Route>
       <Route path="/users">
         <ProtectedRoute component={UsersPage} />
+      </Route>
+      <Route path="/profile">
+        <ProtectedRoute component={Profile} />
       </Route>
       <Route component={NotFound} />
     </Switch>

@@ -4,7 +4,38 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { db } from "./db";
-import { users, inventory } from "@shared/schema";
+import { users, inventory, updateProfileSchema } from "@shared/schema";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
+
+const storage_multer = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = 'server/uploads/profile/';
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage_multer,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error("Only jpeg, jpg, png files are allowed"));
+  }
+});
 
 async function seedDatabase() {
   const existingUsers = await storage.getUsers();
@@ -187,6 +218,44 @@ export async function registerRoutes(
       }
       res.status(500).json({ message: "Internal error" });
     }
+  });
+
+  // Profile Routes
+  app.get(api.profile.get.path, async (req, res) => {
+    // In a real app, we'd check session, but here we assume user is passed or mocked
+    // For now, return the first user if none found in mock auth
+    const user = await storage.getUser(1); 
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  });
+
+  app.get('/uploads/profile/:filename', (req, res) => {
+    const filePath = path.join(process.cwd(), 'server/uploads/profile/', req.params.filename);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).send('File not found');
+    }
+  });
+
+  app.put(api.profile.update.path, async (req, res) => {
+    try {
+      const input = updateProfileSchema.parse(req.body);
+      const updatedUser = await storage.updateUser(1, input); // Mocking user 1
+      if (!updatedUser) return res.status(404).json({ message: "User not found" });
+      res.json(updatedUser);
+    } catch (e: any) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ message: e.errors[0].message });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post(api.profile.upload.path, upload.single('profileImage'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    const url = `/uploads/profile/${req.file.filename}`;
+    res.json({ url });
   });
 
   return httpServer;

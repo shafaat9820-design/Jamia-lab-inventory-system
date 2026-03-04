@@ -53,6 +53,44 @@ export const api = {
       },
     },
   },
+  profile: {
+    get: {
+      method: 'GET' as const,
+      path: '/api/profile' as const,
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/profile' as const,
+      input: z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        age: z.number(),
+        gender: z.string(),
+        employeeId: z.string(),
+        contactNumber: z.string(),
+        dateOfJoining: z.string(),
+        profileImage: z.string().optional(),
+      }),
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+      },
+    },
+    upload: {
+      method: 'POST' as const,
+      path: '/api/profile/upload' as const,
+      responses: {
+        200: z.object({ url: z.string() }),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+      },
+    },
+  },
   inventory: {
     list: {
       method: 'GET' as const,

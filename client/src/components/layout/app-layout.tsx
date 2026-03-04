@@ -2,15 +2,15 @@ import { ReactNode } from "react";
 import { AppSidebar } from "./app-sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { LogOut, University } from "lucide-react";
+import { University } from "lucide-react";
+import { ProfileDropdown } from "../profile-dropdown";
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
 
   return (
     <SidebarProvider>
@@ -38,21 +38,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
             
             <div className="flex items-center gap-4">
-              <div className="hidden md:flex flex-col items-end text-sm">
-                <span className="font-semibold text-white">{user?.name}</span>
-                <span className="text-primary-foreground/80 text-xs px-2 py-0.5 rounded-full bg-primary-foreground/10 border border-primary-foreground/20">
-                  {user?.role}
-                </span>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => logout()}
-                title="Log out"
-                className="text-white hover:bg-white/20 hover:text-white"
-              >
-                <LogOut className="w-5 h-5" />
-              </Button>
+              <ProfileDropdown />
             </div>
           </header>
 

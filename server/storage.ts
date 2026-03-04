@@ -25,6 +25,7 @@ export interface IStorage {
   getRequests(): Promise<RequestItem[]>;
   createRequest(request: InsertRequestItem): Promise<RequestItem>;
   updateRequestStatus(id: number, status: string): Promise<RequestItem | undefined>;
+  updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -90,6 +91,14 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db.update(requests)
       .set({ status })
       .where(eq(requests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set(updates)
+      .where(eq(users.id, id))
       .returning();
     return updated;
   }
