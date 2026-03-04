@@ -38,6 +38,7 @@ export default function Inventory() {
   const { toast } = useToast();
 
   const canEdit = user?.role === "Admin" || user?.role === "Store Keeper";
+  const canView = true; // All roles can view
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

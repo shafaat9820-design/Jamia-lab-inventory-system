@@ -31,7 +31,8 @@ export default function Requests() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 
-  const canApprove = user?.role === "Admin" || user?.role === "Principal" || user?.role === "Lab Incharge";
+  const canRequest = user?.role === "Admin" || user?.role === "Lab Incharge";
+  const canApprove = user?.role === "Admin" || user?.role === "Principal";
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -73,56 +74,58 @@ export default function Requests() {
           <p className="text-muted-foreground mt-1">Manage requests for new equipment or replacements.</p>
         </div>
         
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="shadow-md hover-elevate">
-              <Plus className="w-4 h-4 mr-2" /> New Request
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="font-display text-xl">Equipment Request Form</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Equipment Name</Label>
-                <Input {...form.register("equipmentName")} placeholder="e.g. 3D Printer" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+        {canRequest && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="shadow-md hover-elevate">
+                <Plus className="w-4 h-4 mr-2" /> New Request
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="font-display text-xl">Equipment Request Form</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label>Quantity</Label>
-                  <Input type="number" {...form.register("quantity")} />
+                  <Label>Equipment Name</Label>
+                  <Input {...form.register("equipmentName")} placeholder="e.g. 3D Printer" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Quantity</Label>
+                    <Input type="number" {...form.register("quantity")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Priority</Label>
+                    <Select 
+                      onValueChange={(v) => form.setValue("priority", v)} 
+                      defaultValue={form.getValues("priority")}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Low">Low</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="High">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Priority</Label>
-                  <Select 
-                    onValueChange={(v) => form.setValue("priority", v)} 
-                    defaultValue={form.getValues("priority")}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Low">Low</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="High">High</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Target Lab</Label>
+                  <Input {...form.register("labName")} placeholder="e.g. Embedded Systems Lab" />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Target Lab</Label>
-                <Input {...form.register("labName")} placeholder="e.g. Embedded Systems Lab" />
-              </div>
-              <div className="space-y-2">
-                <Label>Justification</Label>
-                <Textarea {...form.register("reason")} placeholder="Why is this needed?" />
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={createMutation.isPending}>Submit Request</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="space-y-2">
+                  <Label>Justification</Label>
+                  <Textarea {...form.register("reason")} placeholder="Why is this needed?" />
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={createMutation.isPending}>Submit Request</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden">

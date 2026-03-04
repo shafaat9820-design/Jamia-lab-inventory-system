@@ -56,6 +56,8 @@ export default function Reports() {
     return inventory?.find(i => i.id === id)?.name || `Unknown ID: ${id}`;
   };
 
+  const canGenerateReport = user?.role === "Admin" || user?.role === "Lab Incharge";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -64,68 +66,70 @@ export default function Reports() {
           <p className="text-muted-foreground mt-1">Generate and review technical reports for equipment.</p>
         </div>
         
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="shadow-md hover-elevate">
-              <Plus className="w-4 h-4 mr-2" /> Generate Report
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="font-display text-xl">New Inspection Report</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Equipment</Label>
-                <Select 
-                  onValueChange={(v) => form.setValue("equipmentId", Number(v))}
-                >
-                  <SelectTrigger><SelectValue placeholder="Select equipment..." /></SelectTrigger>
-                  <SelectContent>
-                    {inventory?.map(i => (
-                      <SelectItem key={i.id} value={i.id.toString()}>{i.itemCode} - {i.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Functional Status at Inspection</Label>
-                <Select 
-                  onValueChange={(v) => form.setValue("functionalStatus", v)} 
-                  defaultValue={form.getValues("functionalStatus")}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Working">Working (Sub-optimal)</SelectItem>
-                    <SelectItem value="Non Working">Non Working</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Expert Recommendation</Label>
-                <Select 
-                  onValueChange={(v) => form.setValue("recommendation", v)} 
-                  defaultValue={form.getValues("recommendation")}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Continue Use">Continue Use</SelectItem>
-                    <SelectItem value="Repair">Requires Repair</SelectItem>
-                    <SelectItem value="Condemn">Condemn</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Technical Notes</Label>
-                <Textarea {...form.register("notes")} placeholder="Details of inspection..." className="h-24" />
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={createMutation.isPending}>Submit Report</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        {canGenerateReport && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="shadow-md hover-elevate">
+                <Plus className="w-4 h-4 mr-2" /> Generate Report
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="font-display text-xl">New Inspection Report</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label>Equipment</Label>
+                  <Select 
+                    onValueChange={(v) => form.setValue("equipmentId", Number(v))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select equipment..." /></SelectTrigger>
+                    <SelectContent>
+                      {inventory?.map(i => (
+                        <SelectItem key={i.id} value={i.id.toString()}>{i.itemCode} - {i.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Functional Status at Inspection</Label>
+                  <Select 
+                    onValueChange={(v) => form.setValue("functionalStatus", v)} 
+                    defaultValue={form.getValues("functionalStatus")}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Working">Working (Sub-optimal)</SelectItem>
+                      <SelectItem value="Non Working">Non Working</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Expert Recommendation</Label>
+                  <Select 
+                    onValueChange={(v) => form.setValue("recommendation", v)} 
+                    defaultValue={form.getValues("recommendation")}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Continue Use">Continue Use</SelectItem>
+                      <SelectItem value="Repair">Requires Repair</SelectItem>
+                      <SelectItem value="Condemn">Condemn</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Technical Notes</Label>
+                  <Textarea {...form.register("notes")} placeholder="Details of inspection..." className="h-24" />
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={createMutation.isPending}>Submit Report</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
