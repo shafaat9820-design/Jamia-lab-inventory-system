@@ -43,6 +43,15 @@ export const api = {
         401: errorSchemas.unauthorized,
       },
     },
+    register: {
+      method: 'POST' as const,
+      path: '/api/auth/register' as const,
+      input: insertUserSchema,
+      responses: {
+        201: z.custom<typeof users.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
   },
   inventory: {
     list: {

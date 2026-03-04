@@ -49,6 +49,23 @@ export async function registerRoutes(
   // Seed DB on start
   seedDatabase().catch(console.error);
 
+  app.post(api.auth.register.path, async (req, res) => {
+    try {
+      const input = api.auth.register.input.parse(req.body);
+      const existingUser = await storage.getUserByUsername(input.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      const user = await db.insert(users).values(input).returning();
+      res.status(201).json(user[0]);
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ message: e.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Mock Auth
   app.post(api.auth.login.path, async (req, res) => {
     try {

@@ -47,6 +47,7 @@ export const requests = pgTable("requests", {
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const registerUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertInventorySchema = createInsertSchema(inventory).omit({ id: true });
 export const insertReportSchema = createInsertSchema(reports).omit({ id: true, date: true });
 export const insertRequestSchema = createInsertSchema(requests).omit({ id: true, date: true, status: true });

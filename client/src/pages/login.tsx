@@ -6,24 +6,35 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { University } from "lucide-react";
+import { University, Eye, EyeOff } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const { login, isLoggingIn } = useAuth();
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("Lab Assistant");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  
+  const { login, register, isLoggingIn, isRegistering } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login({ username, password });
+      if (isRegisterMode) {
+        await register({ username, password, name, role });
+        toast({ title: "Account Created", description: "Your account has been successfully created." });
+      } else {
+        await login({ username, password });
+      }
       setLocation("/dashboard");
     } catch (err: any) {
       toast({
         variant: "destructive",
-        title: "Login Failed",
+        title: isRegisterMode ? "Registration Failed" : "Login Failed",
         description: err.message,
       });
     }
@@ -45,8 +56,38 @@ export default function LoginPage() {
             Lab Inventory & Condemnation Management
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {isRegisterMode && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter your full name"
+                    required
+                    className="py-6 text-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={role} onValueChange={setRole}>
+                    <SelectTrigger className="py-6 text-md">
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                      <SelectItem value="Lab Assistant">Lab Assistant</SelectItem>
+                      <SelectItem value="Lab Incharge">Lab Incharge</SelectItem>
+                      <SelectItem value="Principal">Principal</SelectItem>
+                      <SelectItem value="Store Keeper">Store Keeper</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input
@@ -62,30 +103,54 @@ export default function LoginPage() {
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
               </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="py-6 text-md"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="py-6 text-md pr-12"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4 pt-4">
             <Button 
               type="submit" 
               className="w-full py-6 text-md font-semibold" 
-              disabled={isLoggingIn}
+              disabled={isLoggingIn || isRegistering}
             >
-              {isLoggingIn ? "Authenticating..." : "Log In"}
+              {isRegisterMode 
+                ? (isRegistering ? "Creating Account..." : "Create Account")
+                : (isLoggingIn ? "Authenticating..." : "Log In")}
             </Button>
             
-            <div className="text-xs text-center text-muted-foreground mt-4">
-              <p>Demo Accounts:</p>
-              <p className="mt-1 font-mono">admin / admin | lab_incharge / pass</p>
-            </div>
+            <Button
+              type="button"
+              variant="link"
+              className="text-primary font-semibold"
+              onClick={() => setIsRegisterMode(!isRegisterMode)}
+            >
+              {isRegisterMode ? "Already have an account? Log In" : "Don't have an account? Create one"}
+            </Button>
+            
+            {!isRegisterMode && (
+              <div className="text-xs text-center text-muted-foreground mt-2">
+                <p>Demo Accounts:</p>
+                <p className="mt-1 font-mono">admin / admin | lab_incharge / pass</p>
+              </div>
+            )}
           </CardFooter>
         </form>
       </Card>
