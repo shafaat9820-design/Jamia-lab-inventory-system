@@ -1,6 +1,11 @@
+<<<<<<< HEAD
 node_modules
 dist
 .DS_Store
 server/public
 vite.config.ts.*
 *.tar.gz
+=======
+.env
+node_modules
+>>>>>>> 7ad870582c8dcc0dd597a0c0b62b8a0cd778bff4
