@@ -8,6 +8,8 @@ import { users, inventory, updateProfileSchema } from "@shared/schema";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
+import passport from "./googleAuth";
+
 
 const storage_multer = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -42,12 +44,12 @@ async function seedDatabase() {
   if (existingUsers.length === 0) {
     // Add dummy users
     await db.insert(users).values([
-      { username: 'admin', password: 'password', role: 'Admin', name: 'System Admin' },
-      { username: 'assistant', password: 'password', role: 'Lab Assistant', name: 'Ravi Kumar' },
-      { username: 'incharge', password: 'password', role: 'Lab Incharge', name: 'Dr. Sameer Khan' },
-      { username: 'principal', password: 'password', role: 'Principal', name: 'Dr. Alok Verma' },
-      { username: 'storekeeper', password: 'password', role: 'Store Keeper', name: 'Amit Singh' }
-    ]);
+  { email: 'admin@jamia.com', password: 'password', role: 'Admin', name: 'System Admin' },
+  { email: 'assistant@jamia.com', password: 'password', role: 'Lab Assistant', name: 'Ravi Kumar' },
+  { email: 'incharge@jamia.com', password: 'password', role: 'Lab Incharge', name: 'Dr. Sameer Khan' },
+  { email: 'principal@jamia.com', password: 'password', role: 'Principal', name: 'Dr. Alok Verma' },
+  { email: 'storekeeper@jamia.com', password: 'password', role: 'Store Keeper', name: 'Amit Singh' }
+]);
   }
 
   const existingInventory = await storage.getInventory();
@@ -77,15 +79,27 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  //google auth routes
+  app.get(
+  "/api/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+  );
+  app.get(
+    "/api/auth/google/callback",
+    passport.authenticate("google", { failureRedirect: "/login" }),
+    (req, res) => {
+      res.redirect("/dashboard");
+    }
+  );
+
   // Seed DB on start
   seedDatabase().catch(console.error);
-
   app.post(api.auth.register.path, async (req, res) => {
     try {
       const input = api.auth.register.input.parse(req.body);
-      const existingUser = await storage.getUserByUsername(input.username);
+      const existingUser = await storage.getUserByEmail(input.email);
       if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
+        return res.status(400).json({ message: "Email already exists" });
       }
       const user = await db.insert(users).values(input).returning();
       res.status(201).json(user[0]);
@@ -100,8 +114,8 @@ export async function registerRoutes(
   // Mock Auth
   app.post(api.auth.login.path, async (req, res) => {
     try {
-      const { username, password } = api.auth.login.input.parse(req.body);
-      const user = await storage.getUserByUsername(username);
+      const { email, password } = api.auth.login.input.parse(req.body);
+      const user = await storage.getUserByEmail(email);
       if (!user || user.password !== password) {
         return res.status(401).json({ message: "Invalid credentials" });
       }

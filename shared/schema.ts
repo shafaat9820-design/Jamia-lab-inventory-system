@@ -4,10 +4,16 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
+
+  // EMAIL LOGIN
+  email: text("email").notNull().unique(),
+
   password: text("password").notNull(),
+
   role: text("role").notNull(), // Admin, Lab Assistant, Lab Incharge, Principal, Store Keeper
+
   name: text("name").notNull(),
+
   firstName: text("first_name"),
   lastName: text("last_name"),
   age: integer("age"),
@@ -16,6 +22,7 @@ export const users = pgTable("users", {
   contactNumber: text("contact_number"),
   dateOfJoining: date("date_of_joining"),
   profileImage: text("profile_image"),
+
   department: text("department").default("Department of Computer Engineering"),
   institution: text("institution").default("Jamia Millia Islamia"),
 });
@@ -51,7 +58,7 @@ export const requests = pgTable("requests", {
   reason: text("reason").notNull(),
   labName: text("lab_name").notNull(),
   priority: text("priority").notNull(), // Low, Medium, High
-  status: text("status").notNull().default('Requested'), // Requested, Approved, Procured, Added to inventory
+  status: text("status").notNull().default("Requested"),
   requestedBy: integer("requested_by").notNull(),
   date: timestamp("date").defaultNow(),
 });

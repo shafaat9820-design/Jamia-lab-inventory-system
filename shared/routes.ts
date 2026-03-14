@@ -20,7 +20,7 @@ export const api = {
       method: 'POST' as const,
       path: '/api/auth/login' as const,
       input: z.object({
-        username: z.string(),
+        email: z.string().email(),
         password: z.string(),
       }),
       responses: {
