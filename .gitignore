@@ -1,11 +1,22 @@
-<<<<<<< HEAD
+# dependencies
 node_modules
-dist
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+build
+
+# misc
 .DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
-=======
 .env
-node_modules
->>>>>>> 7ad870582c8dcc0dd597a0c0b62b8a0cd778bff4
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
