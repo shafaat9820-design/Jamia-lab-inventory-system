@@ -28,6 +28,14 @@ export const users = pgTable("users", {
   isApproved: text("is_approved").notNull().default("false"), // "true" or "false" string to stay consistent with other text fields if needed, or just boolean. Let's use text for consistency with role.
 });
 
+export const otpVerifications = pgTable("otp_verifications", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  otp: text("otp").notNull(),
+  registrationData: text("registration_data").notNull(), // JSON stringized registration info
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
 export const inventory = pgTable("inventory", {
   id: serial("id").primaryKey(),
   itemCode: text("item_code").notNull().unique(),

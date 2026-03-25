@@ -11,14 +11,19 @@ export default function UsersPage() {
   const updateMutation = useUpdateUser();
   const { toast } = useToast();
 
-  const handleStatusUpdate = async (id: number, approved: boolean) => {
+  const handleStatusUpdate = async (id: number, status: "true" | "false" | "denied") => {
     try {
       await updateMutation.mutateAsync({ 
         id, 
-        updates: { isApproved: approved ? "true" : "false" } 
+        updates: { isApproved: status } 
       });
+      
+      let title = "User Approved";
+      if (status === "false") title = "Approval Revoked";
+      if (status === "denied") title = "Application Denied";
+
       toast({
-        title: approved ? "User Approved" : "Approval Revoked",
+        title,
         description: `Successfully updated user status.`,
       });
     } catch (e: any) {
@@ -109,14 +114,14 @@ export default function UsersPage() {
                           size="sm" 
                           variant="ghost" 
                           className="text-red-600 hover:text-red-700 hover:bg-red-50 font-bold"
-                          onClick={() => handleStatusUpdate(u.id, false)}
+                          onClick={() => handleStatusUpdate(u.id, "denied")}
                         >
                           <X className="w-4 h-4 mr-1" /> Deny
                         </Button>
                         <Button 
                           size="sm" 
                           className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 shadow-lg shadow-green-600/20"
-                          onClick={() => handleStatusUpdate(u.id, true)}
+                          onClick={() => handleStatusUpdate(u.id, "true")}
                         >
                           <Check className="w-4 h-4 mr-1" /> Approve Access
                         </Button>
@@ -189,7 +194,7 @@ export default function UsersPage() {
                         size="sm" 
                         variant="ghost" 
                         className="text-muted-foreground hover:text-red-600 transition-colors"
-                        onClick={() => handleStatusUpdate(u.id, false)}
+                        onClick={() => handleStatusUpdate(u.id, "false")}
                       >
                         Revoke Access
                       </Button>

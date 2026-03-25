@@ -20,14 +20,37 @@ const registerSchema = loginSchema.extend({
   name: z.string().min(3, "Full name is required (min 3 chars)."),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid institutional email."),
+});
+
+const resetPasswordSchema = z.object({
+  password: z.string().min(6, "Password must be at least 6 characters."),
+  confirmPassword: z.string().min(6, "Please confirm your password."),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match.",
+  path: ["confirmPassword"],
+});
+
 type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [showConfirmPasswordReset, setShowConfirmPasswordReset] = useState(false);
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [isOtpMode, setIsOtpMode] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [registrationData, setRegistrationData] = useState<RegisterFormValues | null>(null);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<"request" | "otp" | "reset">("request");
+  const [resetEmail, setResetEmail] = useState("");
   
-  const { login, register, isLoggingIn, isRegistering } = useAuth();
+  const { login, register, isLoggingIn, isRegistering, requestOTP, verifyOTP, forgotPassword, resetPassword } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -39,6 +62,16 @@ export default function LoginPage() {
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { email: "", password: "", name: "" },
+  });
+
+  const forgotPasswordForm = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: "" },
+  });
+
+  const resetPasswordForm = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: "", confirmPassword: "" },
   });
 
   const onLoginSubmit = async (data: LoginFormValues) => {
@@ -56,18 +89,107 @@ export default function LoginPage() {
 
   const onRegisterSubmit = async (data: RegisterFormValues) => {
     try {
-      await register(data);
+      setRegistrationData(data);
+      await requestOTP(data);
+      setIsOtpMode(true);
       toast({
-        title: "Registration Successful",
-        description: "Your account request has been sent for Admin approval.",
+        title: "OTP Sent",
+        description: `A 6-digit verification code has been sent to ${data.email}.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "OTP Request Failed",
+        description: err.message || "Could not send verification code. Please try again.",
+      });
+    }
+  };
+
+  const onVerifyOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      toast({
+        variant: "destructive",
+        title: "Invalid OTP",
+        description: "Please enter a 6-digit verification code.",
+      });
+      return;
+    }
+
+    if (!registrationData) return;
+
+    try {
+      setIsVerifyingOtp(true);
+      await verifyOTP({ email: registrationData.email, otp });
+      toast({
+        title: "Account Created Successfully",
+        description: "Your email has been verified. Now you can login after Admin approval.",
       });
       setIsRegisterMode(false);
+      setIsOtpMode(false);
+      setOtp("");
       registerForm.reset();
     } catch (err: any) {
       toast({
         variant: "destructive",
-        title: "Registration Failed",
-        description: err.message || "Could not create account. Please try again.",
+        title: "Verification Failed",
+        description: err.message || "Invalid or expired OTP. Please try again.",
+      });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const onForgotPasswordRequest = async (data: ForgotPasswordFormValues) => {
+    try {
+      await forgotPassword(data.email);
+      setResetEmail(data.email);
+      setForgotPasswordStep("otp");
+      setOtp("");
+      toast({
+        title: "OTP Sent",
+        description: `A 6-digit reset code has been sent to ${data.email}.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Request Failed",
+        description: err.message,
+      });
+    }
+  };
+
+  const onForgotPasswordVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      toast({
+        variant: "destructive",
+        title: "Invalid OTP",
+        description: "Please enter the 6-digit code sent to your email.",
+      });
+      return;
+    }
+    setForgotPasswordStep("reset");
+  };
+
+  const onResetPasswordSubmit = async (data: ResetPasswordFormValues) => {
+    try {
+      await resetPassword({ email: resetEmail, otp, password: data.password });
+      toast({
+        title: "Password Reset Successfully",
+        description: "You can now login with your new password.",
+      });
+      setIsForgotPasswordMode(false);
+      setForgotPasswordStep("request");
+      setResetEmail("");
+      setOtp("");
+      resetPasswordForm.reset();
+      forgotPasswordForm.reset();
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Reset Failed",
+        description: err.message,
       });
     }
   };
@@ -150,115 +272,297 @@ export default function LoginPage() {
 
           <div>
             <h2 className="text-3xl font-black text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
-              {isRegisterMode ? "Staff Registration" : "Portal Login"}
+              {isForgotPasswordMode 
+                ? "Reset Password" 
+                : (isRegisterMode ? "Staff Registration" : "Portal Login")}
             </h2>
             <p className="text-muted-foreground mt-2 font-medium">
-              {isRegisterMode
-                ? "Apply for a new staff account."
-                : "Sign in to manage institutional resources."}
+              {isForgotPasswordMode
+                ? (forgotPasswordStep === "request" ? "Request a password reset link." : "Complete the security verification.")
+                : (isRegisterMode ? "Apply for a new staff account." : "Sign in to manage institutional resources.")}
             </p>
           </div>
 
-          <form 
-            onSubmit={isRegisterMode ? registerForm.handleSubmit(onRegisterSubmit) : loginForm.handleSubmit(onLoginSubmit)} 
-            className="space-y-5"
-          >
-            {isRegisterMode && (
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-bold text-foreground uppercase tracking-tight">Full Name</Label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    {...registerForm.register("name")}
-                    placeholder="Prof. Mohammad Ali"
-                    className={`pl-10 h-12 border-border/80 rounded-xl focus:ring-2 focus:ring-primary/10 transition-all ${registerForm.formState.errors.name ? 'border-red-500 bg-red-50/30' : ''}`}
-                  />
+          {isForgotPasswordMode ? (
+            <div className="space-y-6">
+              {forgotPasswordStep === "request" && (
+                <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordRequest)} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground uppercase tracking-tight">Enter Your Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        {...forgotPasswordForm.register("email")}
+                        type="email"
+                        placeholder="name@jmi.ac.in"
+                        className={`pl-10 h-12 border-border/80 rounded-xl focus:ring-2 focus:ring-primary/10 transition-all ${forgotPasswordForm.formState.errors.email ? 'border-red-500 bg-red-50/30' : ''}`}
+                      />
+                    </div>
+                    {forgotPasswordForm.formState.errors.email && (
+                      <p className="text-[11px] text-red-600 font-bold flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {forgotPasswordForm.formState.errors.email.message}
+                      </p>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full h-12 font-bold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg">
+                    Send Reset OTP <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsForgotPasswordMode(false)}
+                    className="w-full text-center text-xs font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
+                  >
+                    ← Back to Login
+                  </button>
+                </form>
+              )}
+
+              {forgotPasswordStep === "otp" && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl">
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Verify Security Code</p>
+                    <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                      We've sent a 6-digit reset code to <span className="text-foreground font-bold">{resetEmail}</span>.
+                    </p>
+                  </div>
+                  <form onSubmit={onForgotPasswordVerify} className="space-y-5 text-center">
+                    <Input
+                      type="text"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                      placeholder="000000"
+                      className="h-16 text-center text-3xl font-black tracking-[0.5em] border-2 border-primary/20 rounded-2xl focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white shadow-inner transition-all"
+                    />
+                    <Button type="submit" className="w-full h-12 font-bold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg">
+                      Verify Code <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                    <button 
+                      type="button" 
+                      onClick={() => setForgotPasswordStep("request")}
+                      className="w-full text-center text-xs font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
+                    >
+                      ← Back to Email
+                    </button>
+                  </form>
                 </div>
-                {registerForm.formState.errors.name && (
-                  <p className="text-[11px] text-red-600 font-bold flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> {registerForm.formState.errors.name.message}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
 
-            <div className="space-y-2">
-              <Label className="text-sm font-bold text-foreground uppercase tracking-tight">Email Address</Label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  {...(isRegisterMode ? registerForm.register("email") : loginForm.register("email"))}
-                  type="email"
-                  placeholder="name@jmi.ac.in"
-                  className={`pl-10 h-12 border-border/80 rounded-xl focus:ring-2 focus:ring-primary/10 transition-all ${activeForm.formState.errors.email ? 'border-red-500 bg-red-50/30' : ''}`}
-                />
-              </div>
-              {activeForm.formState.errors.email && (
-                <p className="text-[11px] text-red-600 font-bold flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {activeForm.formState.errors.email.message}
-                </p>
+              {forgotPasswordStep === "reset" && (
+                <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground uppercase tracking-tight">New Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        {...resetPasswordForm.register("password")}
+                        type={showPasswordReset ? "text" : "password"}
+                        placeholder="••••••••"
+                        className={`pl-10 h-12 border-border/80 rounded-xl focus:ring-2 focus:ring-primary/10 transition-all ${resetPasswordForm.formState.errors.password ? 'border-red-500 bg-red-50/30' : ''}`}
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPasswordReset(!showPasswordReset)}
+                      >
+                        {showPasswordReset ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {resetPasswordForm.formState.errors.password && (
+                      <p className="text-[11px] text-red-600 font-bold flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {resetPasswordForm.formState.errors.password.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground uppercase tracking-tight">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        {...resetPasswordForm.register("confirmPassword")}
+                        type={showConfirmPasswordReset ? "text" : "password"}
+                        placeholder="••••••••"
+                        className={`pl-10 h-12 border-border/80 rounded-xl focus:ring-2 focus:ring-primary/10 transition-all ${resetPasswordForm.formState.errors.confirmPassword ? 'border-red-500 bg-red-50/30' : ''}`}
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowConfirmPasswordReset(!showConfirmPasswordReset)}
+                      >
+                        {showConfirmPasswordReset ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {resetPasswordForm.formState.errors.confirmPassword && (
+                      <p className="text-[11px] text-red-600 font-bold flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {resetPasswordForm.formState.errors.confirmPassword.message}
+                      </p>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full h-12 font-bold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg">
+                    Update Password <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </form>
               )}
             </div>
+          ) : (
+            <form 
+              onSubmit={
+                isOtpMode 
+                  ? onVerifyOtpSubmit 
+                  : (isRegisterMode ? registerForm.handleSubmit(onRegisterSubmit) : loginForm.handleSubmit(onLoginSubmit))
+              } 
+              className="space-y-5"
+            >
+              {!isOtpMode ? (
+                <>
+                  {isRegisterMode && (
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-sm font-bold text-foreground uppercase tracking-tight">Full Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          {...registerForm.register("name")}
+                          placeholder="Prof. Mohammad Ali"
+                          className={`pl-10 h-12 border-border/80 rounded-xl focus:ring-2 focus:ring-primary/10 transition-all ${registerForm.formState.errors.name ? 'border-red-500 bg-red-50/30' : ''}`}
+                        />
+                      </div>
+                      {registerForm.formState.errors.name && (
+                        <p className="text-[11px] text-red-600 font-bold flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> {registerForm.formState.errors.name.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-            <div className="space-y-2">
-              <Label className="text-sm font-bold text-foreground uppercase tracking-tight">Institutional Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  {...(isRegisterMode ? registerForm.register("password") : loginForm.register("password"))}
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className={`pl-10 pr-12 h-12 border-border/80 rounded-xl focus:ring-2 focus:ring-primary/10 transition-all ${activeForm.formState.errors.password ? 'border-red-500 bg-red-50/30' : ''}`}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              {activeForm.formState.errors.password && (
-                <p className="text-[11px] text-red-600 font-bold flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {activeForm.formState.errors.password.message}
-                </p>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground uppercase tracking-tight">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        {...(isRegisterMode ? registerForm.register("email") : loginForm.register("email"))}
+                        type="email"
+                        placeholder="name@jmi.ac.in"
+                        className={`pl-10 h-12 border-border/80 rounded-xl focus:ring-2 focus:ring-primary/10 transition-all ${activeForm.formState.errors.email ? 'border-red-500 bg-red-50/30' : ''}`}
+                      />
+                    </div>
+                    {activeForm.formState.errors.email && (
+                      <p className="text-[11px] text-red-600 font-bold flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {activeForm.formState.errors.email.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground uppercase tracking-tight">Institutional Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        {...(isRegisterMode ? registerForm.register("password") : loginForm.register("password"))}
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        className={`pl-10 pr-12 h-12 border-border/80 rounded-xl focus:ring-2 focus:ring-primary/10 transition-all ${activeForm.formState.errors.password ? 'border-red-500 bg-red-50/30' : ''}`}
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {activeForm.formState.errors.password && (
+                      <p className="text-[11px] text-red-600 font-bold flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {activeForm.formState.errors.password.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {!isRegisterMode && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsForgotPasswordMode(true);
+                          setForgotPasswordStep("request");
+                        }}
+                        className="text-[11px] font-bold text-primary hover:underline underline-offset-4 uppercase tracking-wider"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl">
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Verify your email</p>
+                    <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                      We've sent a 6-digit code to <span className="text-foreground font-bold">{registrationData?.email}</span>. Please enter it below to complete your registration.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 text-center">
+                    <Label className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">6-Digit Code</Label>
+                    <Input
+                      type="text"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                      placeholder="000000"
+                      className="h-16 text-center text-3xl font-black tracking-[0.5em] border-2 border-primary/20 rounded-2xl focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white shadow-inner transition-all"
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setIsOtpMode(false)}
+                      className="text-[11px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
+                    >
+                      ← Back to Details
+                    </button>
+                  </div>
+                </div>
               )}
-            </div>
 
-            <Button
-              type="submit"
-              className="w-full h-12 text-base font-bold rounded-xl bg-[#1a5a28] hover:bg-[#143f1c] text-white shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 group"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              <span>{isRegisterMode ? "Create Account" : "Access Portal"}</span>
-              {!isSubmitting && <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />}
-            </Button>
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-bold rounded-xl bg-[#1a5a28] hover:bg-[#143f1c] text-white shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 group"
+                disabled={isSubmitting || isVerifyingOtp}
+              >
+                {(isSubmitting || isVerifyingOtp) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                <span>
+                  {isOtpMode 
+                    ? "Verify & Create Account" 
+                    : (isRegisterMode ? "Create Account" : "Access Portal")}
+                </span>
+                {!(isSubmitting || isVerifyingOtp) && <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />}
+              </Button>
 
-            <div className="relative flex items-center gap-3 py-2">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Institutional Access</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
+              {!isOtpMode && (
+                <>
+                  <div className="relative flex items-center gap-3 py-2">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Institutional Access</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-12 rounded-xl border-2 font-bold hover:bg-muted/50 transition-all flex items-center justify-center gap-3"
-              onClick={() => { window.location.href = "/api/auth/google"; }}
-              disabled={isSubmitting}
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Institutional Sign-In (Google)
-            </Button>
-          </form>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12 rounded-xl border-2 font-bold hover:bg-muted/50 transition-all flex items-center justify-center gap-3"
+                    onClick={() => { window.location.href = "/api/auth/google"; }}
+                    disabled={isSubmitting}
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Institutional Sign-In (Google)
+                  </Button>
+                </>
+              )}
+            </form>
+          )}
 
           <div className="text-center pt-2">
             <button

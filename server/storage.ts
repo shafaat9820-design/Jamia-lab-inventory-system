@@ -1,6 +1,6 @@
 import { db } from "./db";
 import {
-  users, inventory, reports, requests,
+  users, inventory, reports, requests, otpVerifications,
   type User, type InsertUser,
   type InventoryItem, type InsertInventoryItem,
   type Report, type InsertReport,
@@ -26,6 +26,11 @@ export interface IStorage {
   createRequest(request: InsertRequestItem): Promise<RequestItem>;
   updateRequestStatus(id: number, status: string): Promise<RequestItem | undefined>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
+  updateUserPassword(id: number, password: string): Promise<void>;
+  deleteUser(id: number): Promise<void>;
+  upsertOTP(email: string, otp: string, registrationData: string, expiresAt: Date): Promise<void>;
+  getOTP(email: string): Promise<{ otp: string; registrationData: string; expiresAt: Date } | undefined>;
+  deleteOTP(email: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -101,6 +106,35 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return updated;
+  }
+
+  async updateUserPassword(id: number, password: string): Promise<void> {
+    await db.update(users)
+      .set({ password })
+      .where(eq(users.id, id));
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  async upsertOTP(email: string, otp: string, registrationData: string, expiresAt: Date): Promise<void> {
+    // Upsert using onConflictDoUpdate
+    await db.insert(otpVerifications)
+      .values({ email, otp, registrationData, expiresAt })
+      .onConflictDoUpdate({
+        target: otpVerifications.email,
+        set: { otp, registrationData, expiresAt }
+      });
+  }
+
+  async getOTP(email: string): Promise<{ otp: string; registrationData: string; expiresAt: Date } | undefined> {
+    const [record] = await db.select().from(otpVerifications).where(eq(otpVerifications.email, email));
+    return record;
+  }
+
+  async deleteOTP(email: string): Promise<void> {
+    await db.delete(otpVerifications).where(eq(otpVerifications.email, email));
   }
 }
 

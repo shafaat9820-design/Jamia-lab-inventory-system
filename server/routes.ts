@@ -9,6 +9,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import passport from "./googleAuth";
+import { sendOTP } from "./email";
 
 
 const storage_multer = multer.diskStorage({
@@ -79,23 +80,21 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   // Ensure default Admin exists
-  // Ensure default Admin exists
-  const adminEmail = "shafaat9820@gmail.com";
+  const adminEmail = "jmi.lab.inventory@gmail.com";
   const existingAdmin = await storage.getUserByEmail(adminEmail);
   if (!existingAdmin) {
     console.log("Creating default Admin: " + adminEmail);
     await db.insert(users).values({
       email: adminEmail,
-      password: "admin123", // Default institutional password
+      password: "admin@", // Default institutional password
       role: "Admin",
       name: "Institutional Admin",
       isApproved: "true"
     });
   } else {
-    console.log("Syncing default Admin: " + adminEmail);
-    // Force sync Admin credentials to resolve potential password conflicts during setup
+    console.log("Checking default Admin: " + adminEmail);
+    // Only sync role and approval to ensure access, don't overwrite password
     await storage.updateUser(existingAdmin.id, { 
-      password: "admin123", 
       isApproved: "true", 
       role: "Admin" 
     });
@@ -119,6 +118,59 @@ export async function registerRoutes(
 
   // Seed DB on start
   seedDatabase().catch(console.error);
+
+  app.post(api.auth.requestOTP.path, async (req, res) => {
+    try {
+      const input = api.auth.requestOTP.input.parse(req.body);
+      const existingUser = await storage.getUserByEmail(input.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await storage.upsertOTP(input.email, otp, JSON.stringify(input), expiresAt);
+      await sendOTP(input.email, otp);
+
+      res.status(200).json({ message: "OTP sent to your email" });
+    } catch (e: any) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ message: e.errors[0].message });
+      }
+      res.status(500).json({ message: e.message || "Internal server error" });
+    }
+  });
+
+  app.post(api.auth.verifyOTP.path, async (req, res) => {
+    try {
+      const { email, otp } = api.auth.verifyOTP.input.parse(req.body);
+      const record = await storage.getOTP(email);
+
+      if (!record || record.otp !== otp || new Date() > record.expiresAt) {
+        return res.status(400).json({ message: "Invalid or expired OTP" });
+      }
+
+      const registrationData = JSON.parse(record.registrationData);
+      
+      const [user] = await db.insert(users).values({
+        ...registrationData,
+        role: "Lab Assistant",
+        isApproved: "false"
+      }).returning();
+
+      await storage.deleteOTP(email);
+
+      res.status(201).json(user);
+    } catch (e: any) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ message: e.errors[0].message });
+      }
+      res.status(500).json({ message: e.message || "Internal server error" });
+    }
+  });
+
   app.post(api.auth.register.path, async (req, res) => {
     try {
       const input = api.auth.register.input.parse(req.body);
@@ -145,6 +197,60 @@ export async function registerRoutes(
     }
   });
 
+  app.post(api.auth.forgotPassword.path, async (req, res) => {
+    try {
+      const { email } = api.auth.forgotPassword.input.parse(req.body);
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "No account found with this email address." });
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await storage.upsertOTP(email, otp, JSON.stringify({ type: "password_reset" }), expiresAt);
+      await sendOTP(email, otp);
+
+      res.json({ message: "OTP sent to your email." });
+    } catch (e: any) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ message: e.errors[0].message });
+      }
+      res.status(500).json({ message: e.message || "Internal server error" });
+    }
+  });
+
+  app.post(api.auth.resetPassword.path, async (req, res) => {
+    try {
+      const { email, otp, password } = api.auth.resetPassword.input.parse(req.body);
+      const record = await storage.getOTP(email);
+
+      if (!record || record.otp !== otp || new Date() > record.expiresAt) {
+        return res.status(400).json({ message: "Invalid or expired OTP." });
+      }
+
+      const data = JSON.parse(record.registrationData);
+      if (data.type !== "password_reset") {
+        return res.status(400).json({ message: "Invalid OTP type." });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found." });
+      }
+
+      await storage.updateUserPassword(user.id, password);
+      await storage.deleteOTP(email);
+
+      res.json({ message: "Password reset successful. Please login with your new password." });
+    } catch (e: any) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ message: e.errors[0].message });
+      }
+      res.status(500).json({ message: e.message || "Internal server error" });
+    }
+  });
+
   // Mock Auth
   app.post(api.auth.login.path, async (req, res) => {
     try {
@@ -152,7 +258,7 @@ export async function registerRoutes(
       console.log(`LOGIN ATTEMPT: Email=[${email}] Password=[${password}]`);
 
       // Super Admin Override for Institutional Email
-      if (email === "shafaat9820@gmail.com" && password === "admin123") {
+      if (email === "jmi.lab.inventory@gmail.com" && password === "admin@") {
         let user = await storage.getUserByEmail(email);
         if (!user) {
           const [newUser] = await db.insert(users).values({
@@ -174,12 +280,22 @@ export async function registerRoutes(
       }
 
       const user = await storage.getUserByEmail(email);
-      if (!user || user.password !== password) {
-        return res.status(401).json({ message: "Invalid credentials" });
+      if (!user) {
+        console.log(`LOGIN FAILED: User not found [${email}]`);
+        return res.status(401).json({ message: "No account found with this email." });
       }
+
+      if (user.password !== password) {
+        console.log(`LOGIN FAILED: Password mismatch for [${email}]. Expected=[${user.password}] Actual=[${password}]`);
+        return res.status(401).json({ message: "Please check your email or password and try again." });
+      }
+
       if (user.isApproved === "false") {
+        console.log(`LOGIN FAILED: User not approved [${email}]`);
         return res.status(403).json({ message: "Your account is pending approval by an Admin." });
       }
+
+      console.log(`LOGIN SUCCESS: [${email}]`);
       if (req.session) {
         (req.session as any).userId = user.id;
       }
@@ -250,6 +366,12 @@ export async function registerRoutes(
     }
     try {
       const { role, isApproved } = api.users.update.input.parse(req.body);
+      
+      if (isApproved === "denied") {
+        await storage.deleteUser(Number(req.params.id));
+        return res.json({ message: "User request denied and removed" });
+      }
+
       const updatedUser = await storage.updateUser(Number(req.params.id), { role, isApproved });
       if (!updatedUser) return res.status(404).json({ message: "User not found" });
       res.json(updatedUser);

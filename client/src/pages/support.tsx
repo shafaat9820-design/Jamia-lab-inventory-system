@@ -35,9 +35,9 @@ export default function Support() {
     {
       icon: Mail,
       label: "Email Us",
-      value: "shafaat9820@gmail.com",
+      value: "jmi.lab.inventory@gmail.com",
       sub: "Expect a reply within 24 hours",
-      href: "mailto:shafaat9820@gmail.com",
+      href: "mailto:jmi.lab.inventory@gmail.com",
     },
     {
       icon: MapPin,

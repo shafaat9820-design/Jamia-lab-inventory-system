@@ -45,7 +45,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </span>
             <span className="flex items-center gap-1.5 border-l border-white/15 pl-6 text-white/70">
               <Mail className="w-3 h-3 text-yellow-400" />
-              shafaat9820@gmail.com
+              jmi.lab.inventory@gmail.com
             </span>
           </div>
           <a
@@ -218,9 +218,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <Phone className="w-4 h-4 text-yellow-400/60" />
                   828066*****
                 </a>
-                <a href="mailto:shafaat9820@gmail.com" className="flex items-center gap-3 text-sm text-white/50 hover:text-white transition-colors font-medium break-all">
+                <a href="mailto:jmi.lab.inventory@gmail.com" className="flex items-center gap-3 text-sm text-white/50 hover:text-white transition-colors font-medium break-all">
                   <Mail className="w-4 h-4 text-yellow-400/60 shrink-0" />
-                  shafaat9820@gmail.com
+                  jmi.lab.inventory@gmail.com
                 </a>
               </div>
             </div>

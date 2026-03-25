@@ -52,6 +52,52 @@ export const api = {
         400: errorSchemas.validation,
       },
     },
+    requestOTP: {
+      method: 'POST' as const,
+      path: '/api/auth/request-otp' as const,
+      input: registerUserSchema,
+      responses: {
+        200: z.object({ message: z.string() }),
+        400: errorSchemas.validation,
+      },
+    },
+    verifyOTP: {
+      method: 'POST' as const,
+      path: '/api/auth/verify-otp' as const,
+      input: z.object({
+        email: z.string().email(),
+        otp: z.string().length(6),
+      }),
+      responses: {
+        201: z.any(),
+        400: errorSchemas.validation,
+      },
+    },
+    forgotPassword: {
+      method: 'POST' as const,
+      path: '/api/auth/forgot-password' as const,
+      input: z.object({
+        email: z.string().email(),
+      }),
+      responses: {
+        200: z.object({ message: z.string() }),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    resetPassword: {
+      method: 'POST' as const,
+      path: '/api/auth/reset-password' as const,
+      input: z.object({
+        email: z.string().email(),
+        otp: z.string().length(6),
+        password: z.string().min(6),
+      }),
+      responses: {
+        200: z.object({ message: z.string() }),
+        400: errorSchemas.validation,
+      },
+    },
   },
   profile: {
     get: {
