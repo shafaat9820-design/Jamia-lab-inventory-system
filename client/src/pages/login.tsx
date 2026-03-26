@@ -45,12 +45,17 @@ export default function LoginPage() {
   const [isOtpMode, setIsOtpMode] = useState(false);
   const [otp, setOtp] = useState("");
   const [registrationData, setRegistrationData] = useState<RegisterFormValues | null>(null);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState<"request" | "otp" | "reset">("request");
   const [resetEmail, setResetEmail] = useState("");
   
-  const { login, register, isLoggingIn, isRegistering, requestOTP, verifyOTP, forgotPassword, resetPassword } = useAuth();
+  const { 
+    login, register, isLoggingIn, isRegistering, 
+    requestOTP, isRequestingOTP,
+    verifyOTP, isVerifyingOTP,
+    forgotPassword, isRequestingForgotPassword,
+    resetPassword, isResettingPassword 
+  } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -119,7 +124,6 @@ export default function LoginPage() {
     if (!registrationData) return;
 
     try {
-      setIsVerifyingOtp(true);
       await verifyOTP({ email: registrationData.email, otp });
       toast({
         title: "Account Created Successfully",
@@ -135,8 +139,6 @@ export default function LoginPage() {
         title: "Verification Failed",
         description: err.message || "Invalid or expired OTP. Please try again.",
       });
-    } finally {
-      setIsVerifyingOtp(false);
     }
   };
 
@@ -195,7 +197,7 @@ export default function LoginPage() {
   };
 
   const activeForm = isRegisterMode ? registerForm : loginForm;
-  const isSubmitting = isLoggingIn || isRegistering;
+  const isSubmitting = isLoggingIn || isRegistering || isRequestingOTP || isVerifyingOTP;
 
   return (
     <div className="min-h-screen flex overflow-hidden bg-[#0a1f0f]">
@@ -304,7 +306,8 @@ export default function LoginPage() {
                       </p>
                     )}
                   </div>
-                  <Button type="submit" className="w-full h-12 font-bold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg">
+                  <Button type="submit" className="w-full h-12 font-bold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg" disabled={isRequestingForgotPassword}>
+                    {isRequestingForgotPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Send Reset OTP <ArrowRight className="ml-2 w-4 h-4" />
                   </Button>
                   <button 
@@ -398,7 +401,8 @@ export default function LoginPage() {
                       </p>
                     )}
                   </div>
-                  <Button type="submit" className="w-full h-12 font-bold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg">
+                  <Button type="submit" className="w-full h-12 font-bold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg" disabled={isResettingPassword}>
+                    {isResettingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Update Password <ArrowRight className="ml-2 w-4 h-4" />
                   </Button>
                 </form>
@@ -525,15 +529,17 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full h-12 text-base font-bold rounded-xl bg-[#1a5a28] hover:bg-[#143f1c] text-white shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 group"
-                disabled={isSubmitting || isVerifyingOtp}
+                disabled={isSubmitting || isVerifyingOTP}
               >
-                {(isSubmitting || isVerifyingOtp) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {(isSubmitting || isVerifyingOTP) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 <span>
-                  {isOtpMode 
-                    ? "Verify & Create Account" 
-                    : (isRegisterMode ? "Create Account" : "Access Portal")}
+                  {isVerifyingOTP 
+                    ? "Verifying..." 
+                    : (isOtpMode 
+                        ? "Verify & Create Account" 
+                        : (isRegisterMode ? "Create Account" : "Access Portal"))}
                 </span>
-                {!(isSubmitting || isVerifyingOtp) && <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />}
+                {!(isSubmitting || isVerifyingOTP) && <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />}
               </Button>
 
               {!isOtpMode && (

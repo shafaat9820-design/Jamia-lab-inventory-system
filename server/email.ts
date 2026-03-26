@@ -1,19 +1,24 @@
 import nodemailer from "nodemailer";
 
-// SMTP configuration from environment variables
-const smtpConfig = {
-  host: process.env.SMTP_HOST || "smtp.ethereal.email",
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-};
-
-const transporter = nodemailer.createTransport(smtpConfig);
-
 export async function sendOTP(email: string, otp: string) {
+  // SMTP configuration from environment variables (evaluated at runtime)
+  const smtpConfig = {
+    host: process.env.SMTP_HOST || "smtp.ethereal.email",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  };
+
+  const transporter = nodemailer.createTransport({
+    ...smtpConfig,
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,   // 10 seconds
+    socketTimeout: 20000,     // 20 seconds
+  });
+
   const mailOptions = {
     from: process.env.SMTP_FROM || '"Jamia Lab Inventory" <noreply@jmi.ac.in>',
     to: email,
@@ -43,17 +48,29 @@ export async function sendOTP(email: string, otp: string) {
     // If auth user/pass are not provided, we might be in dev mode without a real SMTP
     if (!smtpConfig.auth.user || !smtpConfig.auth.pass) {
       console.log("------------------------------------------");
-      console.log(`DEV MODE OTP for ${email}: ${otp}`);
+      console.log(`DEV MODE: SMTP credentials missing.`);
+      console.log(`OTP for ${email}: ${otp}`);
+      console.log("To send real emails on Render, set SMTP_USER and SMTP_PASS variables.");
       console.log("------------------------------------------");
       return true;
     }
 
+    console.log(`Attempting to send OTP email to ${email} via ${smtpConfig.host}...`);
     await transporter.sendMail(mailOptions);
+    console.log(`OTP email sent successfully to ${email}`);
     return true;
-  } catch (error) {
-    console.error("Error sending email:", error);
-    // Even if email fails, in dev we might want to see the OTP in logs
-    console.log(`FALLBACK OTP for ${email}: ${otp}`);
-    throw new Error("Failed to send verification email. Please try again later.");
+  } catch (error: any) {
+    console.error("CRITICAL: Error sending verification email:");
+    if (error.code === 'EAUTH') {
+      console.error("SMTP Authentication Failed: Please check SMTP_USER and SMTP_PASS.");
+    } else if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      console.error(`SMTP Connection Failed: Could not connect to ${smtpConfig.host}:${smtpConfig.port}.`);
+    } else {
+      console.error("Unknown SMTP Error:", error.message);
+    }
+    
+    // Even if email fails, log the OTP so an admin can find it in Render logs
+    console.log(`[FALLBACK] OTP for ${email}: ${otp}`);
+    throw new Error("Failed to send verification email. Please check server logs for details.");
   }
 }

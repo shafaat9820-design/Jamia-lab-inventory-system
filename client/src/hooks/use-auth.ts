@@ -68,6 +68,69 @@ export function useAuth() {
     },
   });
 
+  const requestOTPMutation = useMutation({
+    mutationFn: async (credentials: z.infer<typeof api.auth.requestOTP.input>) => {
+      const res = await fetch(api.auth.requestOTP.path, {
+        method: api.auth.requestOTP.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to send OTP");
+      }
+      return await res.json();
+    },
+  });
+
+  const verifyOTPMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof api.auth.verifyOTP.input>) => {
+      const res = await fetch(api.auth.verifyOTP.path, {
+        method: api.auth.verifyOTP.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Invalid OTP");
+      }
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData([api.auth.me.path], data);
+    },
+  });
+
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await fetch(api.auth.forgotPassword.path, {
+        method: api.auth.forgotPassword.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to send reset OTP");
+      }
+      return await res.json();
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof api.auth.resetPassword.input>) => {
+      const res = await fetch(api.auth.resetPassword.path, {
+        method: api.auth.resetPassword.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to reset password");
+      }
+      return await res.json();
+    },
+  });
+
   return {
     user,
     isLoading,
@@ -75,66 +138,15 @@ export function useAuth() {
     login: loginMutation.mutateAsync,
     register: registerMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
+    requestOTP: requestOTPMutation.mutateAsync,
+    verifyOTP: verifyOTPMutation.mutateAsync,
+    forgotPassword: forgotPasswordMutation.mutateAsync,
+    resetPassword: resetPasswordMutation.mutateAsync,
     isLoggingIn: loginMutation.isPending,
     isRegistering: registerMutation.isPending,
-    requestOTP: useMutation({
-      mutationFn: async (credentials: z.infer<typeof api.auth.requestOTP.input>) => {
-        const res = await fetch(api.auth.requestOTP.path, {
-          method: api.auth.requestOTP.method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(credentials),
-        });
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Failed to send OTP");
-        }
-        return await res.json();
-      },
-    }).mutateAsync,
-    verifyOTP: useMutation({
-      mutationFn: async (data: z.infer<typeof api.auth.verifyOTP.input>) => {
-        const res = await fetch(api.auth.verifyOTP.path, {
-          method: api.auth.verifyOTP.method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Invalid OTP");
-        }
-        return await res.json();
-      },
-      onSuccess: (data) => {
-        queryClient.setQueryData([api.auth.me.path], data);
-      },
-    }).mutateAsync,
-    forgotPassword: useMutation({
-      mutationFn: async (email: string) => {
-        const res = await fetch(api.auth.forgotPassword.path, {
-          method: api.auth.forgotPassword.method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Failed to send reset OTP");
-        }
-        return await res.json();
-      },
-    }).mutateAsync,
-    resetPassword: useMutation({
-      mutationFn: async (data: z.infer<typeof api.auth.resetPassword.input>) => {
-        const res = await fetch(api.auth.resetPassword.path, {
-          method: api.auth.resetPassword.method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Failed to reset password");
-        }
-        return await res.json();
-      },
-    }).mutateAsync,
+    isRequestingOTP: requestOTPMutation.isPending,
+    isVerifyingOTP: verifyOTPMutation.isPending,
+    isRequestingForgotPassword: forgotPasswordMutation.isPending,
+    isResettingPassword: resetPasswordMutation.isPending,
   };
 }
