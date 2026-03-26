@@ -20,7 +20,7 @@ export async function sendOTP(email: string, otp: string) {
   });
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || '"Jamia Lab Inventory" <noreply@jmi.ac.in>',
+    from: process.env.SMTP_FROM || `Jamia Lab Inventory <${smtpConfig.auth.user}>`,
     to: email,
     subject: "Your Verification Code",
     text: `Your verification code is ${otp}. It will expire in 10 minutes.`,
