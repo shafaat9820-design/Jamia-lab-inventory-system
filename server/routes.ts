@@ -120,6 +120,27 @@ export async function registerRoutes(
   // Seed DB on start
   seedDatabase().catch(console.error);
 
+  // Temporary diagnostic route for email
+  app.get("/api/test-email", async (req, res) => {
+    log("Running SMTP diagnostic test...");
+    try {
+      const { sendOTP } = await import("./email");
+      // Use a known test email
+      await sendOTP("test@example.com", "123456");
+      res.json({ success: true, message: "SMTP connection successful. Check logs for FALLBACK if mail didn't actually arrive." });
+    } catch (e: any) {
+      log(`SMTP Diagnostic failed: ${e.message}`, "error");
+      res.status(500).json({ 
+        success: false, 
+        message: e.message,
+        code: e.code,
+        command: e.command,
+        response: e.response,
+        stack: process.env.NODE_ENV === 'development' ? e.stack : undefined
+      });
+    }
+  });
+
   app.post(api.auth.requestOTP.path, async (req, res) => {
     const email = req.body?.email;
     log(`OTP request started for ${email}`);

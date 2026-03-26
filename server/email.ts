@@ -71,6 +71,11 @@ export async function sendOTP(email: string, otp: string) {
     
     // Even if email fails, log the OTP so an admin can find it in Render logs
     console.log(`[FALLBACK] OTP for ${email}: ${otp}`);
-    throw new Error("Failed to send verification email. Please check server logs for details.");
+    
+    // Attach SMTP details to the error so the diagnostic route can report them
+    if (!error.message.includes("Failed to send verification email")) {
+      error.message = `Failed to send verification email: ${error.message}`;
+    }
+    throw error;
   }
 }
