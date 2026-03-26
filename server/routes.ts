@@ -120,10 +120,17 @@ export async function registerRoutes(
   seedDatabase().catch(console.error);
 
   app.post(api.auth.requestOTP.path, async (req, res) => {
+    const email = req.body?.email;
+    log(`OTP request started for ${email}`);
     try {
       const input = api.auth.requestOTP.input.parse(req.body);
+      log(`Input parsed for ${input.email}`);
+      
       const existingUser = await storage.getUserByEmail(input.email);
+      log(`Existing user check completed for ${input.email}`);
+      
       if (existingUser) {
+        log(`Email already exists: ${input.email}`);
         return res.status(400).json({ message: "Email already exists" });
       }
 
@@ -131,11 +138,17 @@ export async function registerRoutes(
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+      log(`Attempting to upsert OTP for ${input.email}`);
       await storage.upsertOTP(input.email, otp, JSON.stringify(input), expiresAt);
+      log(`OTP upserted successfully for ${input.email}`);
+      
+      log(`Calling sendOTP for ${input.email}`);
       await sendOTP(input.email, otp);
+      log(`sendOTP completed successfully for ${input.email}`);
 
       res.status(200).json({ message: "OTP sent to your email" });
     } catch (e: any) {
+      log(`OTP error for ${email}: ${e.message}`, "error");
       if (e instanceof z.ZodError) {
         return res.status(400).json({ message: e.errors[0].message });
       }
