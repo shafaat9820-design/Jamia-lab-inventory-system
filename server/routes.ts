@@ -10,6 +10,7 @@ import fs from "fs";
 import multer from "multer";
 import passport from "./googleAuth";
 import { sendOTP } from "./email";
+import { log } from "./index";
 
 
 const storage_multer = multer.diskStorage({
