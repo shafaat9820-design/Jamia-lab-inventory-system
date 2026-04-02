@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertUserSchema, insertInventorySchema, insertReportSchema, insertRequestSchema, users, inventory, reports, requests } from './schema';
+import { insertUserSchema, registerUserSchema, insertInventorySchema, insertReportSchema, insertRequestSchema, users, inventory, reports, requests } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -24,7 +24,7 @@ export const api = {
         password: z.string(),
       }),
       responses: {
-        200: z.custom<typeof users.$inferSelect>(),
+        200: z.any(),
         401: errorSchemas.unauthorized,
       },
     },
@@ -39,16 +39,16 @@ export const api = {
       method: 'GET' as const,
       path: '/api/auth/me' as const,
       responses: {
-        200: z.custom<typeof users.$inferSelect>(),
+        200: z.any(),
         401: errorSchemas.unauthorized,
       },
     },
     register: {
       method: 'POST' as const,
       path: '/api/auth/register' as const,
-      input: insertUserSchema,
+      input: registerUserSchema,
       responses: {
-        201: z.custom<typeof users.$inferSelect>(),
+        201: z.any(),
         400: errorSchemas.validation,
       },
     },
@@ -184,7 +184,20 @@ export const api = {
       method: 'GET' as const,
       path: '/api/users' as const,
       responses: {
-        200: z.array(z.custom<typeof users.$inferSelect>()),
+        200: z.array(z.any()),
+      },
+    },
+    update: {
+      method: 'PATCH' as const,
+      path: '/api/users/:id' as const,
+      input: z.object({
+        role: z.string().optional(),
+        isApproved: z.string().optional(),
+      }),
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        404: errorSchemas.notFound,
+        401: errorSchemas.unauthorized,
       },
     },
   }

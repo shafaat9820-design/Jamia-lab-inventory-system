@@ -23,8 +23,9 @@ export const users = pgTable("users", {
   dateOfJoining: date("date_of_joining"),
   profileImage: text("profile_image"),
 
-  department: text("department").default("Department of Computer Engineering"),
+  department: text("department").default("Department of Computer Engineering, University Polytechnic"),
   institution: text("institution").default("Jamia Millia Islamia"),
+  isApproved: text("is_approved").notNull().default("false"), // "true" or "false" string to stay consistent with other text fields if needed, or just boolean. Let's use text for consistency with role.
 });
 
 export const inventory = pgTable("inventory", {
@@ -64,7 +65,7 @@ export const requests = pgTable("requests", {
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
-export const registerUserSchema = createInsertSchema(users).omit({ id: true });
+export const registerUserSchema = createInsertSchema(users).omit({ id: true, role: true, isApproved: true });
 export const insertInventorySchema = createInsertSchema(inventory).omit({ id: true });
 export const insertReportSchema = createInsertSchema(reports).omit({ id: true, date: true });
 export const insertRequestSchema = createInsertSchema(requests).omit({ id: true, date: true, status: true });

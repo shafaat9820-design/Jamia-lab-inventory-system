@@ -78,6 +78,28 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Ensure default Admin exists
+  // Ensure default Admin exists
+  const adminEmail = "shafaat9820@gmail.com";
+  const existingAdmin = await storage.getUserByEmail(adminEmail);
+  if (!existingAdmin) {
+    console.log("Creating default Admin: " + adminEmail);
+    await db.insert(users).values({
+      email: adminEmail,
+      password: "admin123", // Default institutional password
+      role: "Admin",
+      name: "Institutional Admin",
+      isApproved: "true"
+    });
+  } else {
+    console.log("Syncing default Admin: " + adminEmail);
+    // Force sync Admin credentials to resolve potential password conflicts during setup
+    await storage.updateUser(existingAdmin.id, { 
+      password: "admin123", 
+      isApproved: "true", 
+      role: "Admin" 
+    });
+  }
 
   //google auth routes
   app.get(
@@ -88,6 +110,9 @@ export async function registerRoutes(
     "/api/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "/login" }),
     (req, res) => {
+      if (req.session && req.user) {
+        (req.session as any).userId = (req.user as any).id;
+      }
       res.redirect("/dashboard");
     }
   );
@@ -101,7 +126,16 @@ export async function registerRoutes(
       if (existingUser) {
         return res.status(400).json({ message: "Email already exists" });
       }
-      const user = await db.insert(users).values(input).returning();
+
+      const user = await db.insert(users).values({
+        ...input,
+        role: "Lab Assistant",
+        isApproved: "false"
+      }).returning();
+
+      if (req.session) {
+        (req.session as any).userId = user[0].id;
+      }
       res.status(201).json(user[0]);
     } catch (e) {
       if (e instanceof z.ZodError) {
@@ -115,9 +149,39 @@ export async function registerRoutes(
   app.post(api.auth.login.path, async (req, res) => {
     try {
       const { email, password } = api.auth.login.input.parse(req.body);
+      console.log(`LOGIN ATTEMPT: Email=[${email}] Password=[${password}]`);
+
+      // Super Admin Override for Institutional Email
+      if (email === "shafaat9820@gmail.com" && password === "admin123") {
+        let user = await storage.getUserByEmail(email);
+        if (!user) {
+          const [newUser] = await db.insert(users).values({
+            email,
+            password,
+            role: "Admin",
+            name: "Institutional Admin",
+            isApproved: "true"
+          }).returning();
+          user = newUser;
+        } else {
+          // Force update to Admin/Approved if it exists but is restricted
+          await storage.updateUser(user.id, { role: "Admin", isApproved: "true", password: "admin123" });
+        }
+        if (req.session) {
+          (req.session as any).userId = user.id;
+        }
+        return res.json(user);
+      }
+
       const user = await storage.getUserByEmail(email);
       if (!user || user.password !== password) {
         return res.status(401).json({ message: "Invalid credentials" });
+      }
+      if (user.isApproved === "false") {
+        return res.status(403).json({ message: "Your account is pending approval by an Admin." });
+      }
+      if (req.session) {
+        (req.session as any).userId = user.id;
       }
       res.json(user);
     } catch (e) {
@@ -128,10 +192,73 @@ export async function registerRoutes(
     }
   });
 
+  app.get(api.auth.me.path, async (req, res) => {
+    if (req.isAuthenticated && req.isAuthenticated()) {
+      return res.json(req.user);
+    }
+    const userId = (req.session as any)?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    res.json(user);
+  });
+
+  app.post(api.auth.logout.path, (req, res) => {
+    req.logout((err) => {
+      if (err) return res.status(500).json({ message: "Logout failed" });
+      if (req.session) {
+        req.session.destroy(() => {
+          res.json({ message: "Logged out" });
+        });
+      } else {
+        res.json({ message: "Logged out" });
+      }
+    });
+  });
+
   // Users
   app.get(api.users.list.path, async (req, res) => {
+    let currentUser: any = req.user;
+    if (!currentUser && req.session && (req.session as any).userId) {
+      currentUser = await storage.getUser((req.session as any).userId);
+    }
+
+    // Additional check for master email to guarantee access
+    const isMasterAdmin = currentUser?.email === "shafaat9820@gmail.com";
+
+    if (!currentUser || (currentUser.role !== "Admin" && !isMasterAdmin)) {
+      console.log(`LIST USERS - DENIED: User=[${currentUser?.email}] Role=[${currentUser?.role}] SessionId=[${(req.session as any)?.userId}]`);
+      return res.status(401).json({ message: "Admin access required" });
+    }
+    
     const allUsers = await storage.getUsers();
     res.json(allUsers);
+  });
+
+  app.patch(api.users.update.path, async (req, res) => {
+    let currentUser: any = req.user;
+    if (!currentUser && req.session && (req.session as any).userId) {
+      currentUser = await storage.getUser((req.session as any).userId);
+    }
+
+    if (!currentUser || currentUser.role !== "Admin") {
+      return res.status(401).json({ message: "Admin access required" });
+    }
+    try {
+      const { role, isApproved } = api.users.update.input.parse(req.body);
+      const updatedUser = await storage.updateUser(Number(req.params.id), { role, isApproved });
+      if (!updatedUser) return res.status(404).json({ message: "User not found" });
+      res.json(updatedUser);
+    } catch (e: any) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ message: e.errors[0].message });
+      }
+      res.status(500).json({ message: e.message });
+    }
   });
 
   // Inventory
@@ -165,15 +292,19 @@ export async function registerRoutes(
 
   app.put(api.inventory.update.path, async (req, res) => {
     try {
-      const input = api.inventory.update.input.parse(req.body);
+      const inputSchema = api.inventory.update.input.extend({
+        originalCost: z.coerce.string().optional(),
+        depreciationRate: z.coerce.string().optional(),
+      });
+      const input = inputSchema.parse(req.body);
       const item = await storage.updateInventoryItem(Number(req.params.id), input);
       if (!item) return res.status(404).json({ message: "Item not found" });
       res.json(item);
-    } catch (e) {
+    } catch (e: any) {
       if (e instanceof z.ZodError) {
         return res.status(400).json({ message: e.errors[0].message });
       }
-      res.status(500).json({ message: "Internal error" });
+      res.status(500).json({ message: e.message });
     }
   });
 
@@ -236,9 +367,9 @@ export async function registerRoutes(
 
   // Profile Routes
   app.get(api.profile.get.path, async (req, res) => {
-    // In a real app, we'd check session, but here we assume user is passed or mocked
-    // For now, return the first user if none found in mock auth
-    const user = await storage.getUser(1); 
+    let userId = (req.user as any)?.id || (req.session as any)?.userId;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+    const user = await storage.getUser(userId); 
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   });
@@ -253,9 +384,12 @@ export async function registerRoutes(
   });
 
   app.put(api.profile.update.path, async (req, res) => {
+    let userId = (req.user as any)?.id || (req.session as any)?.userId;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
     try {
       const input = updateProfileSchema.parse(req.body);
-      const updatedUser = await storage.updateUser(1, input); // Mocking user 1
+      const updatedUser = await storage.updateUser(userId, input);
       if (!updatedUser) return res.status(404).json({ message: "User not found" });
       res.json(updatedUser);
     } catch (e: any) {

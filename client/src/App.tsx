@@ -14,6 +14,8 @@ import Reports from "./pages/reports";
 import Requests from "./pages/requests";
 import UsersPage from "./pages/users";
 import Profile from "./pages/profile";
+import Support from "./pages/support";
+import Guidelines from "./pages/guidelines";
 import NotFound from "@/pages/not-found";
 
 // Protected Route Wrapper
@@ -21,7 +23,38 @@ function ProtectedRoute({ component: Component }: { component: any }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center font-display text-primary text-xl">Loading Jamia Systems...</div>;
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center gap-6"
+        style={{ background: "linear-gradient(135deg, #0a1f0e 0%, #0d3318 60%, #0a1f0e 100%)" }}
+      >
+        <div className="flex flex-col items-center gap-5 animate-pulse">
+          <div className="p-4 bg-white/10 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/10">
+            <img src="/jamia.png" alt="Jamia Logo" className="w-14 h-14 object-contain" />
+          </div>
+          <div className="text-center">
+            <p className="text-yellow-400 text-xs font-black uppercase tracking-[0.3em] mb-2">
+              Initializing System
+            </p>
+            <p
+              className="text-white text-xl font-black"
+              style={{ fontFamily: "'Playfair Display', serif" }}
+            >
+              Jamia Lab Inventory
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-2 h-2 rounded-full bg-yellow-400 animate-bounce"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -63,6 +96,12 @@ function Router() {
       </Route>
       <Route path="/profile">
         <ProtectedRoute component={Profile} />
+      </Route>
+      <Route path="/support">
+        <ProtectedRoute component={Support} />
+      </Route>
+      <Route path="/guidelines">
+        <ProtectedRoute component={Guidelines} />
       </Route>
       <Route component={NotFound} />
     </Switch>

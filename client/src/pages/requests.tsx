@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Plus, Check, X } from "lucide-react";
+import { Plus, Check, X, ClipboardList } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertRequestSchema } from "@shared/schema";
@@ -22,6 +22,25 @@ const formSchema = insertRequestSchema.extend({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+const PriorityBadge = ({ priority }: { priority: string }) => {
+  const styles: Record<string, string> = {
+    "High": "bg-red-100 text-red-700 border-red-200",
+    "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
+    "Low": "bg-green-100 text-green-700 border-green-200",
+  };
+  const dots: Record<string, string> = {
+    "High": "bg-red-500",
+    "Medium": "bg-yellow-500",
+    "Low": "bg-green-500",
+  };
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${styles[priority] || "bg-muted text-muted-foreground border-border"}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dots[priority] || "bg-muted-foreground"}`} />
+      {priority}
+    </span>
+  );
+};
 
 export default function Requests() {
   const { data: requests, isLoading } = useRequests();
@@ -49,7 +68,7 @@ export default function Requests() {
   const onSubmit = async (data: FormValues) => {
     try {
       await createMutation.mutateAsync(data);
-      toast({ title: "Request submitted successfully" });
+      toast({ title: "Request submitted", description: "Your procurement request is now pending approval." });
       setOpen(false);
       form.reset();
     } catch (e: any) {
@@ -60,7 +79,7 @@ export default function Requests() {
   const handleStatusUpdate = async (id: number, status: string) => {
     try {
       await updateStatusMutation.mutateAsync({ id, status });
-      toast({ title: `Request marked as ${status}` });
+      toast({ title: `Request ${status}`, description: `The procurement request has been marked as ${status}.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e.message });
     }
@@ -68,40 +87,44 @@ export default function Requests() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-5">
         <div>
-          <h2 className="text-3xl font-display font-bold text-foreground">Procurement Requests</h2>
-          <p className="text-muted-foreground mt-1">Manage requests for new equipment or replacements.</p>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2 bg-primary/10 rounded-xl">
+              <ClipboardList className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-3xl font-black text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>Procurement Requests</h2>
+          </div>
+          <p className="text-muted-foreground font-medium text-sm ml-14">Manage requests for new or replacement lab equipment.</p>
         </div>
-        
+
         {canRequest && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="shadow-md hover-elevate">
+              <Button className="bg-primary text-white rounded-xl px-5 h-11 font-bold shadow-lg shadow-primary/25 transition-all">
                 <Plus className="w-4 h-4 mr-2" /> New Request
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md rounded-2xl">
               <DialogHeader>
-                <DialogTitle className="font-display text-xl">Equipment Request Form</DialogTitle>
+                <DialogTitle className="text-xl font-black" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  Equipment Request Form
+                </DialogTitle>
               </DialogHeader>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 mt-2">
                 <div className="space-y-2">
-                  <Label>Equipment Name</Label>
-                  <Input {...form.register("equipmentName")} placeholder="e.g. 3D Printer" />
+                  <Label className="text-sm font-semibold">Equipment Name</Label>
+                  <Input {...form.register("equipmentName")} placeholder="e.g. 3D Printer, Raspberry Pi Kit" className="h-10 rounded-lg" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Quantity</Label>
-                    <Input type="number" {...form.register("quantity")} />
+                    <Label className="text-sm font-semibold">Quantity</Label>
+                    <Input type="number" {...form.register("quantity")} className="h-10 rounded-lg" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Priority</Label>
-                    <Select 
-                      onValueChange={(v) => form.setValue("priority", v)} 
-                      defaultValue={form.getValues("priority")}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Label className="text-sm font-semibold">Priority</Label>
+                    <Select onValueChange={(v) => form.setValue("priority", v)} defaultValue="Medium">
+                      <SelectTrigger className="h-10 rounded-lg"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Low">Low</SelectItem>
                         <SelectItem value="Medium">Medium</SelectItem>
@@ -111,16 +134,18 @@ export default function Requests() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Target Lab</Label>
-                  <Input {...form.register("labName")} placeholder="e.g. Embedded Systems Lab" />
+                  <Label className="text-sm font-semibold">Target Laboratory</Label>
+                  <Input {...form.register("labName")} placeholder="e.g. Embedded Systems Lab" className="h-10 rounded-lg" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Justification</Label>
-                  <Textarea {...form.register("reason")} placeholder="Why is this needed?" />
+                  <Label className="text-sm font-semibold">Justification / Reason</Label>
+                  <Textarea {...form.register("reason")} placeholder="Explain why this equipment is needed..." className="h-24 rounded-lg resize-none" />
                 </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={createMutation.isPending}>Submit Request</Button>
+                <div className="flex justify-end gap-3 pt-3 border-t">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-xl">Cancel</Button>
+                  <Button type="submit" disabled={createMutation.isPending} className="rounded-xl font-bold">
+                    {createMutation.isPending ? "Submitting..." : "Submit Request"}
+                  </Button>
                 </div>
               </form>
             </DialogContent>
@@ -128,53 +153,70 @@ export default function Requests() {
         )}
       </div>
 
-      <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/40">
-            <TableRow>
-              <TableHead className="font-semibold text-primary">Equipment</TableHead>
-              <TableHead className="font-semibold text-primary">Lab</TableHead>
-              <TableHead className="font-semibold text-primary">Priority</TableHead>
-              <TableHead className="font-semibold text-primary">Status</TableHead>
-              {canApprove && <TableHead className="text-right font-semibold text-primary">Actions</TableHead>}
+          <TableHeader>
+            <TableRow className="bg-muted/30 hover:bg-muted/30">
+              <TableHead className="font-bold text-foreground/70 text-xs uppercase tracking-wider">Equipment</TableHead>
+              <TableHead className="font-bold text-foreground/70 text-xs uppercase tracking-wider">Laboratory</TableHead>
+              <TableHead className="font-bold text-foreground/70 text-xs uppercase tracking-wider">Priority</TableHead>
+              <TableHead className="font-bold text-foreground/70 text-xs uppercase tracking-wider">Status</TableHead>
+              {canApprove && <TableHead className="text-right font-bold text-foreground/70 text-xs uppercase tracking-wider">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8">Loading...</TableCell></TableRow>
+              Array.from({ length: 3 }).map((_, i) => (
+                <TableRow key={i}>
+                  {[1, 2, 3, 4, ...(canApprove ? [5] : [])].map(j => (
+                    <TableCell key={j}><div className="h-4 bg-muted/60 rounded-full animate-pulse" /></TableCell>
+                  ))}
+                </TableRow>
+              ))
             ) : requests?.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No requests found</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={canApprove ? 5 : 4} className="text-center py-20">
+                  <ClipboardList className="w-12 h-12 mx-auto text-muted-foreground/25 mb-3" />
+                  <p className="font-semibold text-muted-foreground">No procurement requests</p>
+                  <p className="text-sm text-muted-foreground/60 mt-1">Submit a new request to get started.</p>
+                </TableCell>
+              </TableRow>
             ) : (
               requests?.map((req) => (
-                <TableRow key={req.id}>
-                  <TableCell>
-                    <div className="font-semibold">{req.equipmentName} <span className="text-muted-foreground font-normal">x{req.quantity}</span></div>
-                    <div className="text-xs text-muted-foreground truncate max-w-xs" title={req.reason}>{req.reason}</div>
+                <TableRow key={req.id} className="hover:bg-muted/20 transition-colors border-b last:border-0">
+                  <TableCell className="py-4">
+                    <p className="font-bold text-foreground">{req.equipmentName} <span className="text-muted-foreground font-normal">×{req.quantity}</span></p>
+                    <p className="text-xs text-muted-foreground/70 truncate max-w-xs mt-0.5" title={req.reason}>{req.reason}</p>
                   </TableCell>
-                  <TableCell>{req.labName}</TableCell>
-                  <TableCell>
-                    <span className={`font-semibold text-xs px-2 py-1 rounded-full ${
-                      req.priority === 'High' ? 'bg-red-100 text-red-700' :
-                      req.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
-                    }`}>
-                      {req.priority}
-                    </span>
-                  </TableCell>
+                  <TableCell className="text-sm font-medium text-muted-foreground">{req.labName}</TableCell>
+                  <TableCell><PriorityBadge priority={req.priority} /></TableCell>
                   <TableCell><StatusBadge status={req.status} /></TableCell>
                   {canApprove && (
                     <TableCell className="text-right">
-                      {req.status === 'Requested' && (
+                      {req.status === "Requested" && (
                         <div className="flex justify-end gap-2">
-                          <Button size="icon" variant="outline" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => handleStatusUpdate(req.id, "Approved")}>
-                            <Check className="w-4 h-4" />
+                          <Button
+                            size="sm" variant="outline"
+                            className="h-8 rounded-lg text-green-700 border-green-200 hover:bg-green-50 font-bold text-xs gap-1.5"
+                            onClick={() => handleStatusUpdate(req.id, "Approved")}
+                          >
+                            <Check className="w-3.5 h-3.5" /> Approve
                           </Button>
-                          <Button size="icon" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleStatusUpdate(req.id, "Rejected")}>
-                            <X className="w-4 h-4" />
+                          <Button
+                            size="sm" variant="outline"
+                            className="h-8 rounded-lg text-red-700 border-red-200 hover:bg-red-50 font-bold text-xs gap-1.5"
+                            onClick={() => handleStatusUpdate(req.id, "Rejected")}
+                          >
+                            <X className="w-3.5 h-3.5" /> Reject
                           </Button>
                         </div>
                       )}
-                      {req.status === 'Approved' && (
-                        <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(req.id, "Procured")}>
+                      {req.status === "Approved" && (
+                        <Button
+                          size="sm" variant="outline"
+                          className="h-8 rounded-lg font-bold text-xs"
+                          onClick={() => handleStatusUpdate(req.id, "Procured")}
+                        >
                           Mark Procured
                         </Button>
                       )}

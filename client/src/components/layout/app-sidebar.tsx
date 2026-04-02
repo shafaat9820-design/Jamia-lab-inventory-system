@@ -3,6 +3,8 @@ import {
   Package, 
   FileText, 
   ClipboardList, 
+  HelpCircle,
+  BookOpen,
   Users 
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
@@ -29,6 +31,8 @@ export function AppSidebar() {
     { title: "Inventory", url: "/inventory", icon: Package },
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Requests", url: "/requests", icon: ClipboardList },
+    { title: "Guidelines", url: "/guidelines", icon: BookOpen },
+    { title: "Support & Help", url: "/support", icon: HelpCircle },
   ];
 
   // Only Admin and Principal can see all users

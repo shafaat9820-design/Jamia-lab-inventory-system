@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrency, calculateCurrentValue } from "@/lib/depreciation";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Package, Filter } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,9 +28,11 @@ type FormValues = z.infer<typeof formSchema>;
 export default function Inventory() {
   const { data: inventory, isLoading } = useInventory();
   const { user } = useAuth();
+  const totalItems = inventory?.length || 0;
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const createMutation = useCreateInventory();
   const updateMutation = useUpdateInventory();
@@ -38,7 +40,6 @@ export default function Inventory() {
   const { toast } = useToast();
 
   const canEdit = user?.role === "Admin" || user?.role === "Store Keeper";
-  const canView = true; // All roles can view
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -59,11 +60,11 @@ export default function Inventory() {
   const onSubmit = async (data: FormValues) => {
     try {
       if (editingId) {
-        await updateMutation.mutateAsync({ id: editingId, ...data });
-        toast({ title: "Item updated successfully" });
+        await updateMutation.mutateAsync({ id: editingId, ...(data as any) });
+        toast({ title: "Asset updated", description: "Equipment record has been updated successfully." });
       } else {
         await createMutation.mutateAsync(data as any);
-        toast({ title: "Item added successfully" });
+        toast({ title: "Asset registered", description: "New equipment has been added to inventory." });
       }
       setDialogOpen(false);
       form.reset();
@@ -75,99 +76,107 @@ export default function Inventory() {
 
   const handleEdit = (item: any) => {
     setEditingId(item.id);
-    form.reset({
-      ...item,
-      purchaseDate: new Date(item.purchaseDate).toISOString().split('T')[0],
-    });
+    form.reset({ ...item, purchaseDate: new Date(item.purchaseDate).toISOString().split('T')[0] });
     setDialogOpen(true);
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this item?")) {
+    if (confirm("Are you sure you want to remove this equipment from inventory? This action cannot be undone.")) {
       try {
         await deleteMutation.mutateAsync(id);
-        toast({ title: "Item deleted successfully" });
+        toast({ title: "Asset removed", description: "Equipment has been deregistered from inventory." });
       } catch (e: any) {
         toast({ variant: "destructive", title: "Error", description: e.message });
       }
     }
   };
 
-  const filteredItems = inventory?.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    item.itemCode.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredItems = (inventory || []).filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.itemCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.labName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" ||
+      (statusFilter === "working" && item.functionalStatus === "Working") ||
+      (statusFilter === "nonworking" && item.functionalStatus === "Non Working") ||
+      (statusFilter === "condemned" && item.approvalStatus === "Condemned");
+    return matchesSearch && matchesStatus;
+  });
+
+  const FormField = ({ label, children }: { label: string, children: React.ReactNode }) => (
+    <div className="space-y-2">
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      {children}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-5">
         <div>
-          <h2 className="text-3xl font-display font-bold text-foreground">Asset Inventory</h2>
-          <p className="text-muted-foreground mt-1">Manage lab equipment and track depreciation.</p>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2 bg-primary/10 rounded-xl">
+              <Package className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-3xl font-black text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>Asset Inventory</h2>
+          </div>
+          <p className="text-muted-foreground font-medium text-sm ml-14">
+            {isLoading ? "Loading..." : `${filteredItems.length} of ${(inventory || []).length} assets displayed`}
+          </p>
         </div>
-        
+
         {canEdit && (
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) { form.reset(); setEditingId(null); }
-          }}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { form.reset(); setEditingId(null); } }}>
             <DialogTrigger asChild>
-              <Button className="shadow-md hover-elevate">
-                <Plus className="w-4 h-4 mr-2" /> Add Equipment
+              <Button className="bg-primary hover:bg-primary/90 text-white rounded-xl px-5 h-11 font-bold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all">
+                <Plus className="w-4 h-4 mr-2" />
+                Register Equipment
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
               <DialogHeader>
-                <DialogTitle className="font-display text-xl">{editingId ? "Edit Equipment" : "Add New Equipment"}</DialogTitle>
+                <DialogTitle className="text-xl font-black" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  {editingId ? "Edit Equipment Record" : "Register New Equipment"}
+                </DialogTitle>
               </DialogHeader>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Item Code</Label>
-                    <Input {...form.register("itemCode")} placeholder="e.g. CE-LAB1-001" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Name</Label>
-                    <Input {...form.register("name")} placeholder="e.g. Oscilloscope" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Category</Label>
-                    <Input {...form.register("category")} placeholder="e.g. Electronics" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Lab Name</Label>
-                    <Input {...form.register("labName")} placeholder="e.g. Hardware Lab" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Purchase Date</Label>
-                    <Input type="date" {...form.register("purchaseDate")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Original Cost (₹)</Label>
-                    <Input type="number" step="0.01" {...form.register("originalCost")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Depreciation Rate (%)</Label>
-                    <Input type="number" step="0.1" {...form.register("depreciationRate")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Useful Life (Years)</Label>
-                    <Input type="number" {...form.register("usefulLife")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Functional Status</Label>
+                  <FormField label="Item / Asset Code">
+                    <Input {...form.register("itemCode")} placeholder="e.g. CE-LAB1-001" className="h-10 rounded-lg" />
+                  </FormField>
+                  <FormField label="Equipment Name">
+                    <Input {...form.register("name")} placeholder="e.g. Digital Oscilloscope" className="h-10 rounded-lg" />
+                  </FormField>
+                  <FormField label="Category">
+                    <Input {...form.register("category")} placeholder="e.g. Electronics, Computing" className="h-10 rounded-lg" />
+                  </FormField>
+                  <FormField label="Laboratory Name">
+                    <Input {...form.register("labName")} placeholder="e.g. Hardware Lab" className="h-10 rounded-lg" />
+                  </FormField>
+                  <FormField label="Purchase Date">
+                    <Input type="date" {...form.register("purchaseDate")} className="h-10 rounded-lg" />
+                  </FormField>
+                  <FormField label="Original Cost (₹)">
+                    <Input type="number" step="0.01" {...form.register("originalCost")} className="h-10 rounded-lg" />
+                  </FormField>
+                  <FormField label="Depreciation Rate (% per year)">
+                    <Input type="number" step="0.1" {...form.register("depreciationRate")} className="h-10 rounded-lg" />
+                  </FormField>
+                  <FormField label="Useful Life (Years)">
+                    <Input type="number" {...form.register("usefulLife")} className="h-10 rounded-lg" />
+                  </FormField>
+                  <FormField label="Functional Status">
                     <Select onValueChange={(v) => form.setValue("functionalStatus", v)} defaultValue={form.getValues("functionalStatus")}>
-                      <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                      <SelectTrigger className="h-10 rounded-lg"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Working">Working</SelectItem>
-                        <SelectItem value="Non Working">Non Working</SelectItem>
+                        <SelectItem value="Working">✅ Working</SelectItem>
+                        <SelectItem value="Non Working">❌ Non Working</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Approval Status</Label>
+                  </FormField>
+                  <FormField label="Approval Status">
                     <Select onValueChange={(v) => form.setValue("approvalStatus", v)} defaultValue={form.getValues("approvalStatus")}>
-                      <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                      <SelectTrigger className="h-10 rounded-lg"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Active">Active</SelectItem>
                         <SelectItem value="Pending Approval">Pending Approval</SelectItem>
@@ -175,12 +184,12 @@ export default function Inventory() {
                         <SelectItem value="Condemned">Condemned</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
+                  </FormField>
                 </div>
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                    {editingId ? "Update" : "Save"} Item
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl px-5">Cancel</Button>
+                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="rounded-xl px-6 font-bold">
+                    {editingId ? "Update Record" : "Register Asset"}
                   </Button>
                 </div>
               </form>
@@ -189,66 +198,108 @@ export default function Inventory() {
         )}
       </div>
 
-      <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-        <div className="p-4 border-b bg-muted/20">
-          <div className="relative max-w-sm">
+      {/* Table Container */}
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex flex-col sm:flex-row gap-3 p-4 border-b bg-muted/20">
+          <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search by code or name..." 
+            <Input
+              placeholder="Search by name, code, or lab..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-white"
+              className="pl-9 h-10 rounded-xl bg-white"
             />
           </div>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-10 w-44 rounded-xl bg-white">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="working">Working</SelectItem>
+                <SelectItem value="nonworking">Non Working</SelectItem>
+                <SelectItem value="condemned">Condemned</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead className="font-semibold text-primary">Item</TableHead>
-                <TableHead className="font-semibold text-primary">Lab</TableHead>
-                <TableHead className="font-semibold text-primary text-right">Orig. Cost</TableHead>
-                <TableHead className="font-semibold text-primary text-right">Depr. Value</TableHead>
-                <TableHead className="font-semibold text-primary">Status</TableHead>
-                {canEdit && <TableHead className="text-right font-semibold text-primary">Actions</TableHead>}
+            <TableHeader>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <TableHead className="font-bold text-foreground/70 text-xs uppercase tracking-wider">Asset</TableHead>
+                <TableHead className="font-bold text-foreground/70 text-xs uppercase tracking-wider">Laboratory</TableHead>
+                <TableHead className="font-bold text-foreground/70 text-xs uppercase tracking-wider text-right">Orig. Cost</TableHead>
+                <TableHead className="font-bold text-foreground/70 text-xs uppercase tracking-wider text-right">Current Value</TableHead>
+                <TableHead className="font-bold text-foreground/70 text-xs uppercase tracking-wider">Status</TableHead>
+                {canEdit && <TableHead className="text-right font-bold text-foreground/70 text-xs uppercase tracking-wider">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading inventory...</TableCell></TableRow>
+                Array.from({ length: 4 }).map((_, i) => (
+                  <TableRow key={i}>
+                    {Array.from({ length: canEdit ? 6 : 5 }).map((_, j) => (
+                      <TableCell key={j}><div className="h-4 bg-muted/60 rounded-full animate-pulse" /></TableCell>
+                    ))}
+                  </TableRow>
+                ))
               ) : filteredItems.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No items found</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={canEdit ? 6 : 5} className="text-center py-20">
+                    <Package className="w-12 h-12 mx-auto text-muted-foreground/25 mb-3" />
+                    <p className="font-semibold text-muted-foreground">No equipment found</p>
+                    <p className="text-sm text-muted-foreground/60 mt-1">
+                      {searchTerm ? "Try a different search term." : "Register your first asset to get started."}
+                    </p>
+                  </TableCell>
+                </TableRow>
               ) : (
                 filteredItems.map((item) => {
                   const currentValue = calculateCurrentValue(item.originalCost, item.depreciationRate, item.purchaseDate);
+                  const deprPct = totalItems ? Math.round(((Number(item.originalCost) - currentValue) / (Number(item.originalCost) || 1)) * 100) : 0;
                   return (
-                    <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell>
-                        <div className="font-semibold">{item.name}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{item.itemCode}</div>
+                    <TableRow key={item.id} className="hover:bg-muted/20 transition-colors border-b last:border-0">
+                      <TableCell className="py-4">
+                        <div>
+                          <p className="font-bold text-foreground">{item.name}</p>
+                          <p className="text-xs font-mono text-muted-foreground/70 mt-0.5">{item.itemCode} · {item.category}</p>
+                        </div>
                       </TableCell>
-                      <TableCell>{item.labName}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatCurrency(Number(item.originalCost))}</TableCell>
-                      <TableCell className="text-right tabular-nums font-semibold text-primary">
-                        {formatCurrency(currentValue)}
+                      <TableCell className="text-sm font-medium text-muted-foreground">{item.labName}</TableCell>
+                      <TableCell className="text-right tabular-nums font-semibold text-sm">{formatCurrency(Number(item.originalCost))}</TableCell>
+                      <TableCell className="text-right">
+                        <div>
+                          <p className="tabular-nums font-black text-sm text-primary">{formatCurrency(currentValue)}</p>
+                          <p className="text-xs text-red-500/70 font-medium">{deprPct}% loss</p>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1 items-start">
                           <StatusBadge status={item.functionalStatus} />
-                          {item.approvalStatus !== "Active" && (
-                            <StatusBadge status={item.approvalStatus} />
-                          )}
+                          {item.approvalStatus !== "Active" && <StatusBadge status={item.approvalStatus} />}
                         </div>
                       </TableCell>
                       {canEdit && (
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
-                              <Edit className="w-4 h-4 text-blue-600" />
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => handleEdit(item)}
+                              className="w-8 h-8 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                              <Trash2 className="w-4 h-4 text-red-600" />
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => handleDelete(item.id)}
+                              className="w-8 h-8 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </div>
                         </TableCell>

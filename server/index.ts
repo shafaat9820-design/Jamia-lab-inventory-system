@@ -5,17 +5,29 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import session from "express-session";
 import passport from "./googleAuth";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 
-
+const PgSession = connectPgSimple(session);
+const pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 const app = express();
 const httpServer = createServer(app);
 
 app.use(
   session({
-    secret: "secret123",
+    store: new PgSession({
+      pool: pgPool,
+      tableName: "session",
+      createTableIfMissing: true,
+    }),
+    secret: "jamia-lab-secret-2024",
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      httpOnly: true,
+    },
   })
 );
 
