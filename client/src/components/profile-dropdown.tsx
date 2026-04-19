@@ -25,7 +25,7 @@ export function ProfileDropdown() {
 
   const initials = (user.name || "User")
     .split(" ")
-    .map((n) => (n ? n[0] : ""))
+    .map((n: string) => (n ? n[0] : ""))
     .join("")
     .toUpperCase();
 
@@ -39,7 +39,8 @@ export function ProfileDropdown() {
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div className="hidden md:flex flex-col items-start text-left leading-tight">
+          <div className="hidden 2xl:flex flex-col items-start text-left leading-tight">
+
             <span className="text-xs font-bold truncate max-w-[100px]">{user.name}</span>
             <span className="text-[10px] opacity-80 uppercase tracking-tighter">{user.role}</span>
           </div>

@@ -68,11 +68,17 @@ export default function UsersPage() {
   const approvedUsers = users?.filter(u => u.isApproved === "true") || [];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-10 lg:px-20 py-10">
+      <div className="space-y-8">
       <div className="flex flex-col gap-1">
-        <h2 className="text-3xl font-display font-bold text-foreground tracking-tight">System User Management</h2>
-        <p className="text-muted-foreground flex items-center gap-2 font-medium italic">
-          <Shield className="w-4 h-4 text-primary" /> Institutional directory and access control.
+        <div className="flex items-center gap-3 mb-1">
+          <div className="p-2.5 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl border border-primary/10">
+            <Shield className="w-5 h-5 text-primary" />
+          </div>
+          <h2 className="text-3xl font-black text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>User Management</h2>
+        </div>
+        <p className="text-muted-foreground font-medium text-sm ml-14">
+          Institutional directory and access control
         </p>
       </div>
 
@@ -80,27 +86,35 @@ export default function UsersPage() {
       {pendingUsers.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/10 rounded-full">
+            <div className="p-2 bg-gradient-to-br from-yellow-500/15 to-yellow-500/5 rounded-full border border-yellow-200">
               <AlertCircle className="w-5 h-5 text-yellow-600" />
             </div>
-            <h3 className="text-xl font-bold">Pending Approvals ({pendingUsers.length})</h3>
+            <div>
+              <h3 className="text-lg font-black" style={{ fontFamily: "'Playfair Display', serif" }}>Pending Approvals</h3>
+              <p className="text-xs text-muted-foreground">{pendingUsers.length} user{pendingUsers.length !== 1 ? 's' : ''} awaiting review</p>
+            </div>
           </div>
-          <div className="bg-white rounded-2xl border shadow-xl overflow-hidden ring-4 ring-yellow-500/5">
+          <div className="bg-white rounded-2xl border shadow-sm overflow-hidden ring-2 ring-yellow-500/10">
             <Table>
-              <TableHeader className="bg-yellow-500/5">
-                <TableRow className="border-b border-yellow-500/10">
-                  <TableHead className="font-bold text-yellow-900">User Identification</TableHead>
-                  <TableHead className="font-bold text-yellow-900">Account Status</TableHead>
-                  <TableHead className="text-right font-bold text-yellow-900">Administrative Actions</TableHead>
+              <TableHeader>
+                <TableRow className="bg-yellow-500/[0.04] hover:bg-yellow-500/[0.04] border-b border-yellow-500/10">
+                  <TableHead className="font-bold text-foreground/70 text-[11px] uppercase tracking-wider pl-5">User Identification</TableHead>
+                  <TableHead className="font-bold text-foreground/70 text-[11px] uppercase tracking-wider">Account Status</TableHead>
+                  <TableHead className="text-right font-bold text-foreground/70 text-[11px] uppercase tracking-wider pr-5">Administrative Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pendingUsers.map(u => (
-                  <TableRow key={u.id} className="hover:bg-yellow-50/30 transition-colors">
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-bold text-foreground text-md">{u.name}</span>
-                        <span className="text-xs font-mono text-muted-foreground">{u.email}</span>
+                  <TableRow key={u.id} className="hover:bg-yellow-50/30 transition-colors border-b last:border-0">
+                    <TableCell className="pl-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-700 border border-yellow-200">
+                          <UserIcon className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-bold text-foreground text-sm">{u.name}</span>
+                          <span className="text-[11px] font-mono text-muted-foreground">{u.email}</span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -108,22 +122,22 @@ export default function UsersPage() {
                         Requested
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right pr-5">
                       <div className="flex justify-end gap-2">
                         <Button 
                           size="sm" 
-                          variant="ghost" 
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 font-bold"
+                          variant="outline" 
+                          className="h-8 rounded-lg text-red-600 border-red-200 hover:bg-red-50 font-bold text-xs gap-1.5"
                           onClick={() => handleStatusUpdate(u.id, "denied")}
                         >
-                          <X className="w-4 h-4 mr-1" /> Deny
+                          <X className="w-3.5 h-3.5" /> Deny
                         </Button>
                         <Button 
                           size="sm" 
-                          className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 shadow-lg shadow-green-600/20"
+                          className="h-8 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold text-xs gap-1.5 px-4 shadow-sm"
                           onClick={() => handleStatusUpdate(u.id, "true")}
                         >
-                          <Check className="w-4 h-4 mr-1" /> Approve Access
+                          <Check className="w-3.5 h-3.5" /> Approve
                         </Button>
                       </div>
                     </TableCell>
@@ -138,36 +152,56 @@ export default function UsersPage() {
       {/* Main Users Directory */}
       <section className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-full">
+          <div className="p-2 bg-gradient-to-br from-primary/15 to-primary/5 rounded-full border border-primary/10">
             <UserCheck className="w-5 h-5 text-primary" />
           </div>
-          <h3 className="text-xl font-bold">Approved Staff Directory</h3>
+          <div>
+            <h3 className="text-lg font-black" style={{ fontFamily: "'Playfair Display', serif" }}>Staff Directory</h3>
+            <p className="text-xs text-muted-foreground">{approvedUsers.length} approved user{approvedUsers.length !== 1 ? 's' : ''}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl border shadow-xl overflow-hidden">
+        <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
           <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow className="border-b">
-                <TableHead className="font-bold text-primary">Identity</TableHead>
-                <TableHead className="font-bold text-primary">Institutional Role</TableHead>
-                <TableHead className="text-right font-bold text-primary">Management</TableHead>
+            <TableHeader>
+              <TableRow className="bg-[#0d3318]/[0.03] hover:bg-[#0d3318]/[0.03] border-b">
+                <TableHead className="font-bold text-foreground/70 text-[11px] uppercase tracking-wider pl-5">Identity</TableHead>
+                <TableHead className="font-bold text-foreground/70 text-[11px] uppercase tracking-wider">Institutional Role</TableHead>
+                <TableHead className="text-right font-bold text-foreground/70 text-[11px] uppercase tracking-wider pr-5">Management</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={3} className="text-center py-20 text-muted-foreground flex flex-col items-center gap-2"><div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" /> Verifying Directory...</TableCell></TableRow>
+                <TableRow>
+                <TableCell colSpan={3} className="text-center py-20">
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin mb-4" />
+                    <p className="text-sm text-muted-foreground font-medium">Verifying Directory...</p>
+                  </div>
+                </TableCell>
+              </TableRow>
               ) : approvedUsers.length === 0 ? (
-                <TableRow><TableCell colSpan={3} className="text-center py-20 italic text-muted-foreground">No approved staff found in this unit.</TableCell></TableRow>
+                <TableRow>
+                <TableCell colSpan={3} className="text-center py-24">
+                  <div className="flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-full bg-muted/40 flex items-center justify-center mb-4">
+                      <UserIcon className="w-8 h-8 text-muted-foreground/30" />
+                    </div>
+                    <p className="font-bold text-muted-foreground text-lg">No approved staff found</p>
+                    <p className="text-sm text-muted-foreground/60 mt-1">Approve pending users to populate the directory.</p>
+                  </div>
+                </TableCell>
+              </TableRow>
               ) : (
-                approvedUsers.map((u) => (
-                  <TableRow key={u.id} className="hover:bg-muted/20 transition-all border-b last:border-0">
-                    <TableCell>
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center text-primary border border-primary/10">
-                          <UserIcon className="w-5 h-5" />
+                approvedUsers.map((u, index) => (
+                  <TableRow key={u.id} className={`hover:bg-primary/[0.02] transition-all border-b last:border-0 ${index % 2 === 0 ? 'bg-white' : 'bg-muted/[0.04]'}`}>
+                    <TableCell className="pl-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-primary/5 flex items-center justify-center text-primary border border-primary/10">
+                          <UserIcon className="w-4 h-4" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold tracking-tight text-md">{u.name}</span>
-                          <span className="text-xs font-mono text-muted-foreground opacity-75">{u.email}</span>
+                          <span className="font-bold tracking-tight text-sm">{u.name}</span>
+                          <span className="text-[11px] font-mono text-muted-foreground/70">{u.email}</span>
                         </div>
                       </div>
                     </TableCell>
@@ -189,11 +223,11 @@ export default function UsersPage() {
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right pr-5">
                       <Button 
                         size="sm" 
                         variant="ghost" 
-                        className="text-muted-foreground hover:text-red-600 transition-colors"
+                        className="text-xs font-semibold text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         onClick={() => handleStatusUpdate(u.id, "false")}
                       >
                         Revoke Access
@@ -206,6 +240,7 @@ export default function UsersPage() {
           </Table>
         </div>
       </section>
+      </div>
     </div>
   );
 }

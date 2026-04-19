@@ -1,10 +1,19 @@
+/**
+ * Project: Jamia Lab Inventory Management System
+ * Developed by: JMI University Polytechnic Computer Engg 6th Sem Students
+ * Team: Shafaat, Farman, Aqdas, Rihan, Farhan
+ */
+
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import session from "express-session";
-import passport from "./googleAuth";
+import { setupCronJobs } from "./cron";
+import fs from "fs";
+import path from "path";
+
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 
@@ -14,6 +23,18 @@ const pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const app = express();
 const httpServer = createServer(app);
 
+// setup uploads
+const uploadsBaseDir = path.join(process.cwd(), "server", "uploads");
+
+['bills', 'pdf', 'profile'].forEach(dir => {
+  const fullPath = path.join(uploadsBaseDir, dir);
+  if (!fs.existsSync(fullPath)) {
+    fs.mkdirSync(fullPath, { recursive: true });
+  }
+});
+
+app.use('/uploads', express.static(uploadsBaseDir));
+
 app.use(
   session({
     store: new PgSession({
@@ -21,7 +42,10 @@ app.use(
       tableName: "session",
       createTableIfMissing: true,
     }),
-    secret: "jamia-lab-secret-2024",
+    secret: process.env.SESSION_SECRET || (() => {
+      console.warn("WARNING: SESSION_SECRET is not set. Using a temporary secret. Please set it in your environment variables for production security.");
+      return "jamia-polytechnic-inventory-system-secure-session-2024-fallback";
+    })(),
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -31,8 +55,7 @@ app.use(
   })
 );
 
-app.use(passport.initialize());
-app.use(passport.session());
+
 
 declare module "http" {
   interface IncomingMessage {
@@ -89,6 +112,7 @@ app.use((req, res, next) => {
 
 (async () => {
   await registerRoutes(httpServer, app);
+  setupCronJobs();
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -113,12 +137,8 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(port, () => {
-  log(`serving on port ${port}`);
+  console.log(`Server is running on port ${port}`);
 });
 })();

@@ -5,7 +5,8 @@ import {
   ClipboardList, 
   HelpCircle,
   BookOpen,
-  Users 
+  Users,
+  TrendingDown
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -29,14 +30,13 @@ export function AppSidebar() {
   const navItems = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Inventory", url: "/inventory", icon: Package },
+    { title: "Depreciation", url: "/depreciation", icon: TrendingDown },
     { title: "Reports", url: "/reports", icon: FileText },
     { title: "Requests", url: "/requests", icon: ClipboardList },
-    { title: "Guidelines", url: "/guidelines", icon: BookOpen },
-    { title: "Support & Help", url: "/support", icon: HelpCircle },
   ];
 
-  // Only Admin and Principal can see all users
-  if (isAdmin || isPrincipal) {
+  // Only Admin can manage users
+  if (isAdmin) {
     navItems.push({ title: "Users", url: "/users", icon: Users });
   }
 

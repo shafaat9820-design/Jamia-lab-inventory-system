@@ -34,7 +34,7 @@ export default function Profile() {
 
   const initials = (user.name || "User")
     .split(" ")
-    .map((n) => (n ? n[0] : ""))
+    .map((n: string) => (n ? n[0] : ""))
     .join("")
     .toUpperCase();
 
@@ -44,7 +44,7 @@ export default function Profile() {
     { icon: Phone, label: "Contact Number", value: user.contactNumber || "Not set" },
     { icon: Calendar, label: "Date of Joining", value: user.dateOfJoining ? new Date(user.dateOfJoining).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" }) : "Not set" },
     { icon: GraduationCap, label: "Age / Gender", value: `${user.age || "—"} / ${user.gender || "—"}` },
-    { icon: Building2, label: "Department", value: user.department || "Department of Computer Engineering, University Polytechnic" },
+    { icon: Building2, label: "Department", value: user.department || "University Polytechnic" },
   ];
 
   const roleBadgeColor: Record<string, string> = {
@@ -56,7 +56,8 @@ export default function Profile() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-10 lg:px-20 py-10">
+      <div className="space-y-8">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
         <div>
@@ -157,7 +158,7 @@ export default function Profile() {
               <p className="text-muted-foreground text-sm font-medium mt-0.5">
                 {isEditing
                   ? "Update your personal and professional details."
-                  : "Official institutional records for the Department of Computer Engineering."}
+                  : "Official institutional records for the University Polytechnic."}
               </p>
             </div>
           </div>
@@ -181,6 +182,7 @@ export default function Profile() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

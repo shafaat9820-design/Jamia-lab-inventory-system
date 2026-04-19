@@ -89,7 +89,7 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
     }
   };
 
-  const initials = (user?.name || "User").split(" ").map(n => n[0]).join("").toUpperCase();
+  const initials = (user?.name || "User").split(" ").map((n: string) => n[0]).join("").toUpperCase();
 
   return (
     <form onSubmit={form.handleSubmit((data) => updateMutation.mutate(data))} className="space-y-8">
@@ -180,7 +180,7 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
         </div>
         <div className="space-y-2">
           <Label className="opacity-70">Department</Label>
-          <Input value={user?.department || "Department of Computer Engineering, University Polytechnic"} disabled className="bg-muted" />
+          <Input value={user?.department || "University Polytechnic"} disabled className="bg-muted" />
         </div>
       </div>
 

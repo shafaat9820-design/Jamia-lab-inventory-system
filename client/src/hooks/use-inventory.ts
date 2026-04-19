@@ -71,3 +71,20 @@ export function useDeleteInventory() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.inventory.list.path] }),
   });
 }
+
+export function useCondemnInventory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/inventory/${id}/condemn`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to condemn item");
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.inventory.list.path] }),
+  });
+}

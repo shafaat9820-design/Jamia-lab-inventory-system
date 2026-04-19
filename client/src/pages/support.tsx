@@ -56,7 +56,8 @@ export default function Support() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-10 lg:px-20 py-10">
+      <div className="space-y-8">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-5">
         <div>
@@ -212,6 +213,7 @@ export default function Support() {
             </div>
           </form>
         </div>
+      </div>
       </div>
     </div>
   );

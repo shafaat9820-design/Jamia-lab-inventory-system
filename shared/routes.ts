@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertUserSchema, registerUserSchema, insertInventorySchema, insertReportSchema, insertRequestSchema, users, inventory, reports, requests } from './schema';
+import { insertUserSchema, registerUserSchema, insertInventorySchema, insertReportSchema, insertRequestSchema, users, inventory, reports, requests, passwordSchema } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -91,7 +91,7 @@ export const api = {
       input: z.object({
         email: z.string().email(),
         otp: z.string().length(6),
-        password: z.string().min(6),
+        password: passwordSchema,
       }),
       responses: {
         200: z.object({ message: z.string() }),
@@ -195,6 +195,15 @@ export const api = {
       responses: {
         201: z.custom<typeof reports.$inferSelect>(),
         400: errorSchemas.validation,
+      },
+    },
+    updateStatus: {
+      method: 'PATCH' as const,
+      path: '/api/reports/:id/status' as const,
+      input: z.object({ status: z.string() }),
+      responses: {
+        200: z.custom<typeof reports.$inferSelect>(),
+        404: errorSchemas.notFound,
       },
     },
   },

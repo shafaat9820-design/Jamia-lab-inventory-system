@@ -16,6 +16,8 @@ import UsersPage from "./pages/users";
 import Profile from "./pages/profile";
 import Support from "./pages/support";
 import Guidelines from "./pages/guidelines";
+import Depreciation from "./pages/depreciation";
+import DeadInventory from "./pages/dead-inventory";
 import NotFound from "@/pages/not-found";
 
 // Protected Route Wrapper
@@ -102,6 +104,12 @@ function Router() {
       </Route>
       <Route path="/guidelines">
         <ProtectedRoute component={Guidelines} />
+      </Route>
+      <Route path="/depreciation">
+        <ProtectedRoute component={Depreciation} />
+      </Route>
+      <Route path="/dead-inventory">
+        <ProtectedRoute component={DeadInventory} />
       </Route>
       <Route component={NotFound} />
     </Switch>

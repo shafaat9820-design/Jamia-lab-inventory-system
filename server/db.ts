@@ -1,3 +1,9 @@
+/**
+ * Project: Jamia Lab Inventory Management System
+ * Developed by: JMI University Polytechnic Computer Engg 6th Sem Students
+ * Team: Shafaat, Farman, Aqdas, Rihan, Farhan
+ */
+
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";

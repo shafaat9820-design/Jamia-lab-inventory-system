@@ -9,14 +9,14 @@
   --font-display: 'Playfair Display', serif;
 
   /* Jamia Millia Islamia Institutional Green — Refined Palette */
-  --background: 150 20% 97%;
-  --foreground: 150 40% 8%;
+  --background: 150 18% 97%;
+  --foreground: 150 45% 7%;
   
   --card: 0 0% 100%;
-  --card-foreground: 150 40% 8%;
+  --card-foreground: 150 45% 7%;
   
   --popover: 0 0% 100%;
-  --popover-foreground: 150 40% 8%;
+  --popover-foreground: 150 45% 7%;
   
   /* Deep institutional green */
   --primary: 152 72% 22%;
@@ -26,56 +26,26 @@
   --secondary: 42 95% 50%;
   --secondary-foreground: 152 72% 12%;
   
-  --muted: 150 20% 93%;
-  --muted-foreground: 150 15% 42%;
+  --muted: 150 16% 94%;
+  --muted-foreground: 150 12% 44%;
   
-  --accent: 150 25% 88%;
+  --accent: 150 22% 90%;
   --accent-foreground: 152 72% 20%;
   
   --destructive: 0 80% 48%;
   --destructive-foreground: 0 0% 100%;
   
-  --border: 150 18% 87%;
-  --input: 150 18% 87%;
+  --border: 150 16% 88%;
+  --input: 150 16% 88%;
   --ring: 152 72% 22%;
 
-  --radius: 0.625rem;
+  --radius: 0.75rem;
 
   --chart-1: 152 72% 22%;
   --chart-2: 42 95% 50%;
   --chart-3: 200 80% 45%;
   --chart-4: 0 80% 48%;
   --chart-5: 280 60% 50%;
-}
-
-.dark {
-  --background: 150 40% 5%;
-  --foreground: 0 0% 96%;
-  
-  --card: 150 35% 8%;
-  --card-foreground: 0 0% 96%;
-  
-  --popover: 150 35% 8%;
-  --popover-foreground: 0 0% 96%;
-  
-  --primary: 152 60% 38%;
-  --primary-foreground: 152 80% 5%;
-  
-  --secondary: 42 95% 50%;
-  --secondary-foreground: 152 80% 5%;
-  
-  --muted: 150 28% 14%;
-  --muted-foreground: 150 18% 68%;
-  
-  --accent: 150 28% 14%;
-  --accent-foreground: 0 0% 96%;
-  
-  --destructive: 0 80% 55%;
-  --destructive-foreground: 0 0% 100%;
-  
-  --border: 150 28% 17%;
-  --input: 150 28% 17%;
-  --ring: 152 60% 38%;
 }
 
 @layer base {
@@ -97,21 +67,7 @@
 }
 
 @layer utilities {
-  .hover-elevate {
-    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg;
-  }
-  .footer-gradient {
-    background: linear-gradient(180deg, hsl(var(--muted)/0.2) 0%, hsl(var(--muted)/0.6) 100%);
-  }
-  .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/60 shadow-xl;
-  }
-  .stat-card {
-    @apply bg-white rounded-2xl border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 overflow-hidden;
-  }
-  .page-header {
-    @apply flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8;
-  }
+  /* ─── Layout ─── */
   .scrollbar-none {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -119,4 +75,108 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /* ─── Card Styles ─── */
+  .stat-card {
+    @apply bg-white rounded-2xl border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 overflow-hidden;
+  }
+  .glass-card {
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  }
+  .page-header {
+    @apply flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6;
+  }
+
+  /* ─── Hover Elevation ─── */
+  .hover-elevate {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  /* ─── Gradient Text ─── */
+  .gradient-text {
+    background: linear-gradient(135deg, #0d3318, #1a8040);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .gold-text {
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ─── Animations ─── */
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out both;
+  }
+  .animate-fade-up {
+    animation: fadeUp 0.5s cubic-bezier(.22,.68,0,1.2) both;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.3s cubic-bezier(.22,.68,0,1.2) both;
+  }
+  .animate-slide-right {
+    animation: slideRight 0.4s cubic-bezier(.22,.68,0,1.2) both;
+  }
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.10s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.20s; }
+  .stagger-5 { animation-delay: 0.25s; }
+
+  /* ─── Shimmer Skeleton ─── */
+  .skeleton {
+    @apply bg-gradient-to-r from-muted via-muted/60 to-muted rounded;
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+  }
+
+  /* ─── Table Mobile Scroll ─── */
+  .table-wrapper {
+    @apply overflow-x-auto rounded-xl;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ─── Gradient Header─── */
+  .jmi-header-gradient {
+    background: linear-gradient(135deg, #0a2710 0%, #0d3318 40%, #1a5a28 70%, #0d3318 100%);
+  }
+  .jmi-card-gradient {
+    background: linear-gradient(135deg, #0d3318 0%, #1a5a28 100%);
+  }
+
+  /* ─── Input focus ring ─── */
+  .input-ring {
+    @apply focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/50 transition-all;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }

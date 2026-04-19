@@ -7,21 +7,18 @@ export function calculateCurrentValue(cost: number | string, rate: number | stri
   if (!purchaseDate) return Number(cost);
   
   const c = Number(cost);
-  const r = Number(rate) / 100; // Convert percentage to decimal
+  const r = Number(rate) / 100;
   
   const pDate = new Date(purchaseDate);
   if (isNaN(pDate.getTime())) return c;
 
-  // Calculate difference in exact years
-  const msPerYear = 1000 * 60 * 60 * 24 * 365.25;
-  const years = Math.max(0, (Date.now() - pDate.getTime()) / msPerYear);
+  const currentYear = new Date().getFullYear();
+  const purchaseYear = pDate.getFullYear();
+  const years = Math.max(0, currentYear - purchaseYear);
   
   const currentValue = c * Math.pow(1 - r, years);
   
-  // Ensure value doesn't drop below 5% salvage value
-  const salvageValue = c * 0.05;
-  
-  return Math.max(currentValue, salvageValue);
+  return currentValue;
 }
 
 export function formatCurrency(amount: number): string {

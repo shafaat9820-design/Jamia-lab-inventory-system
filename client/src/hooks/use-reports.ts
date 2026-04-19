@@ -31,3 +31,20 @@ export function useCreateReport() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.reports.list.path] }),
   });
 }
+
+export function useUpdateReportStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const res = await fetch(api.reports.updateStatus.path.replace(":id", id.toString()), {
+        method: api.reports.updateStatus.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update report status");
+      return api.reports.updateStatus.responses[200].parse(await res.json());
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.reports.list.path] }),
+  });
+}
