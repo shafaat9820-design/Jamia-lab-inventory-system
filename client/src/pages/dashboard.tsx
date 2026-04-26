@@ -566,7 +566,7 @@ export default function Dashboard() {
           <h2 className="text-2xl sm:text-3xl font-black text-foreground">Institution Leadership</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {[
             {
               name: "Dr. M.A. Khan",
@@ -581,6 +581,13 @@ export default function Dashboard() {
               subtitle: "University Polytechnic, Computer Engineering",
               image: "/farah.png",
               delay: "stagger-2"
+            },
+            {
+              name: "Mr. Asad Mirza Baig",
+              title: "STORE KEEPER",
+              subtitle: "University Polytechnic, Jamia Millia Islamia",
+              image: "/asad.jpg",
+              delay: "stagger-3"
             }
           ].map((leader) => (
             <div key={leader.name} className={`glass-card rounded-[2.5rem] p-8 flex flex-col items-center text-center relative overflow-hidden group hover:shadow-2xl transition-all duration-500 ${leader.delay}`}>
