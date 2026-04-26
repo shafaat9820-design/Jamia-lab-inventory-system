@@ -589,7 +589,7 @@ export default function Dashboard() {
               title: "STORE KEEPER",
               subtitle: "University Polytechnic, Jamia Millia Islamia",
               image: "/asad.jpg",
-              objectPosition: "top",
+              objectPosition: "center",
               delay: "stagger-3"
             }
           ].map((leader) => (
