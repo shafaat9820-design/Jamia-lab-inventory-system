@@ -573,6 +573,7 @@ export default function Dashboard() {
               title: "PRINCIPAL",
               subtitle: "University Polytechnic, Jamia Millia Islamia",
               image: "/principal.png",
+              objectPosition: "center",
               delay: "stagger-1"
             },
             {
@@ -580,6 +581,7 @@ export default function Dashboard() {
               title: "LAB INCHARGE & PROJECT GUIDE",
               subtitle: "University Polytechnic, Computer Engineering",
               image: "/farah.png",
+              objectPosition: "center",
               delay: "stagger-2"
             },
             {
@@ -587,6 +589,7 @@ export default function Dashboard() {
               title: "STORE KEEPER",
               subtitle: "University Polytechnic, Jamia Millia Islamia",
               image: "/asad.jpg",
+              objectPosition: "top",
               delay: "stagger-3"
             }
           ].map((leader) => (
@@ -602,6 +605,7 @@ export default function Dashboard() {
                     src={leader.image} 
                     alt={leader.name} 
                     className="w-full h-full object-cover"
+                    style={{ objectPosition: leader.objectPosition }}
                     onError={(e) => {
                       const cleanName = leader.name.replace(/^(Dr\.|Ms\.|Mr\.|Mrs\.)\s+/i, '');
                       (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=0d3318&color=fff&size=128&bold=true`;
